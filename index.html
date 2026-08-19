@@ -4,13 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel AutoJob - Configurações</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 flex justify-center">
+  <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700">
+    <h1 class="text-2xl font-bold mb-6 text-indigo-400 flex items-center gap-2">
+      ⚙️ Gerenciador do AutoJob
+    </h1>
+
+    <!-- Token GitHub -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">GitHub Personal Access Token (PAT):</label>
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
+      <p class="text-xs text-slate-400 mt-1">Necessário com permissão de escrita no repositório.</p>
+    </div>
+
+    <!-- Termos de Busca -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Termos de Busca (separados por vírgula):</label>
+      <textarea id="termosBusca" rows="3" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500"></textarea>
+    </div>
+
+    <!-- Locais -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Locais / Modalidades (separados por vírgula):</label>
+      <input type="text" id="locais" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Exclusões -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Palavras para Excluir do Título (ex: Sênior, Estágio):</label>
+      <input type="text" id="termosExcluir" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Botões -->
+    <div class="flex gap-4">
+      <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar Atual</button>
+      <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
+    </div>
+
+    <div id="status" class="mt-4 text-center font-medium"></div>
+  </div>
+
   <script>
     const REPO = "robsonmaiocchi/autojob";
     const FILE_PATH = "config.json";
 
     let fileSha = "";
 
-    // Funções auxiliares para codificar e decodificar UTF-8 em Base64
     function base64ToUtf8(str) {
       const bytes = Uint8Array.from(atob(str), c => c.charCodeAt(0));
       return new TextDecoder().decode(bytes);
@@ -31,7 +72,6 @@
         const data = await res.json();
         fileSha = data.sha;
         
-        // Decodificação correta de UTF-8
         const contentJson = base64ToUtf8(data.content.replace(/\n/g, ''));
         const content = JSON.parse(contentJson);
 
@@ -64,7 +104,6 @@
         plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
       };
 
-      // Codificação correta para UTF-8
       const jsonString = JSON.stringify(newConfig, null, 2);
       const contentBase64 = utf8ToBase64(jsonString);
 
