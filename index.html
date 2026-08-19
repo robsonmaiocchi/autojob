@@ -25,19 +25,19 @@
       <label class="block text-sm font-medium mb-2 text-slate-300">Plataformas Ativas:</label>
       <div class="grid grid-cols-2 gap-4 bg-slate-700 p-3 rounded border border-slate-600">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platGupy" class="w-4 h-4 text-indigo-600 rounded">
+          <input type="checkbox" id="platGupy" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Gupy (API)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platSolides" class="w-4 h-4 text-indigo-600 rounded">
+          <input type="checkbox" id="platSolides" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Sólides (API)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platLinkedin" class="w-4 h-4 text-indigo-600 rounded">
+          <input type="checkbox" id="platLinkedin" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>LinkedIn (Scraper)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platIndeed" class="w-4 h-4 text-indigo-600 rounded">
+          <input type="checkbox" id="platIndeed" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Indeed (Scraper)</span>
         </label>
       </div>
@@ -63,7 +63,7 @@
 
     <!-- Botões Principais -->
     <div class="flex gap-4 mb-4">
-      <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar Atual</button>
+      <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar do GitHub</button>
       <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
     </div>
 
@@ -83,7 +83,53 @@
     const FILE_PATH = "config.json";
     let fileSha = "";
 
+    // Filtros pré-definidos para preenchimento rápido
+    const DEFAULT_CONFIG = {
+      termos_busca: [
+        "Analista de Suporte Tecnico",
+        "Suporte SaaS",
+        "Suporte Tecnico",
+        "Technical Support Analyst",
+        "Analista de Suporte Junior",
+        "Analista de Suporte Pleno"
+      ],
+      locais: [
+        "Remoto",
+        "Imbituba",
+        "Tubarão",
+        "Joinville",
+        "Curitiba"
+      ],
+      termos_excluir: [
+        "Estágio",
+        "Intern",
+        "Sênior",
+        "Senior",
+        "Lead",
+        "Coordenador",
+        "Gerente",
+        "Manager",
+        "Especialista"
+      ],
+      plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
+    };
+
+    function preencherFormulario(config) {
+      document.getElementById("termosBusca").value = config.termos_busca.join(", ");
+      document.getElementById("locais").value = config.locais.join(", ");
+      document.getElementById("termosExcluir").value = (config.termos_excluir || []).join(", ");
+      
+      const plats = config.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true };
+      document.getElementById("platGupy").checked = plats.gupy !== false;
+      document.getElementById("platSolides").checked = plats.solides !== false;
+      document.getElementById("platLinkedin").checked = plats.linkedin !== false;
+      document.getElementById("platIndeed").checked = plats.indeed !== false;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
+      // Preenche previamente com as suas definições
+      preencherFormulario(DEFAULT_CONFIG);
+
       const savedToken = localStorage.getItem("autojob_pat");
       if (savedToken) {
         document.getElementById("ghToken").value = savedToken;
@@ -105,7 +151,7 @@
 
     async function carregarConfig() {
       const status = document.getElementById("status");
-      status.innerText = "Carregando...";
+      status.innerText = "Carregando do GitHub...";
       try {
         const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`);
         const data = await res.json();
@@ -114,21 +160,13 @@
         const contentJson = base64ToUtf8(data.content.replace(/\n/g, ''));
         const content = JSON.parse(contentJson);
 
-        document.getElementById("termosBusca").value = content.termos_busca.join(", ");
-        document.getElementById("locais").value = content.locais.join(", ");
-        document.getElementById("termosExcluir").value = (content.termos_excluir || []).join(", ");
-        
-        const plats = content.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true };
-        document.getElementById("platGupy").checked = plats.gupy !== false;
-        document.getElementById("platSolides").checked = plats.solides !== false;
-        document.getElementById("platLinkedin").checked = plats.linkedin !== false;
-        document.getElementById("platIndeed").checked = plats.indeed !== false;
+        preencherFormulario(content);
 
-        status.innerText = "✅ Configuração carregada com sucesso!";
+        status.innerText = "✅ Configuração atualizada com sucesso via GitHub!";
         status.className = "mt-4 text-center font-medium text-green-400";
       } catch (err) {
-        status.innerText = "❌ Erro ao carregar. Verifique o repositório ou token.";
-        status.className = "mt-4 text-center font-medium text-red-400";
+        status.innerText = "⚠️ Exibindo valores pré-definidos (Clique em Salvar para enviar ao GitHub).";
+        status.className = "mt-4 text-center font-medium text-amber-400";
       }
     }
 
@@ -142,7 +180,7 @@
       }
 
       localStorage.setItem("autojob_pat", token);
-      status.innerText = "Salvando...";
+      status.innerText = "Salvando no repositório...";
 
       const newConfig = {
         termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
@@ -160,7 +198,7 @@
       const contentBase64 = utf8ToBase64(jsonString);
 
       const body = {
-        message: "chore: atualiza config.json via painel web",
+        message: "chore: atualiza filtros e termos de busca via painel web",
         content: contentBase64,
         sha: fileSha
       };
@@ -178,7 +216,7 @@
         if (res.ok) {
           const resData = await res.json();
           fileSha = resData.content.sha;
-          status.innerText = "🚀 Salvo com sucesso no GitHub!";
+          status.innerText = "🚀 Filtros salvos com sucesso no GitHub!";
           status.className = "mt-4 text-center font-medium text-green-400";
         } else {
           throw new Error("Erro de permissão ou token inválido");
