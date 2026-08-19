@@ -1,4 +1,159 @@
 {
-  "ids": [],
-  "detalhes": []
+  "ids": [
+    "linkedin_4451462980",
+    "linkedin_4344200849",
+    "linkedin_4453616114",
+    "linkedin_4442898630",
+    "linkedin_4424366271",
+    "linkedin_4445408807",
+    "linkedin_4445705208",
+    "linkedin_4443636651",
+    "linkedin_4448678643",
+    "linkedin_4452462570",
+    "linkedin_4453164367",
+    "linkedin_4451467993",
+    "linkedin_4454058130",
+    "linkedin_4453147548",
+    "linkedin_4448192654",
+    "linkedin_4449693556",
+    "linkedin_4448075442",
+    "linkedin_4452559111",
+    "linkedin_4444183429",
+    "linkedin_4455957701"
+  ],
+  "detalhes": [
+    {
+      "id": "linkedin_4454058130",
+      "titulo": "Suporte técnico",
+      "plataforma": "LinkedIn",
+      "local": "Jaraguá do Sul, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-at-lyncas-4454058130"
+    },
+    {
+      "id": "linkedin_4445408807",
+      "titulo": "Analista de Suporte Jr (Qcertifica)",
+      "plataforma": "LinkedIn",
+      "local": "Blumenau, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-jr-qcertifica-at-quick-soft-tecnologia-4445408807"
+    },
+    {
+      "id": "linkedin_4455957701",
+      "titulo": "Jr Technical Support Analyst",
+      "plataforma": "LinkedIn",
+      "local": "Belo Horizonte, Minas Gerais, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/jr-technical-support-analyst-at-komatsu-4455957701"
+    },
+    {
+      "id": "linkedin_4452559111",
+      "titulo": "Analista de Suporte Jr Qcertifica",
+      "plataforma": "LinkedIn",
+      "local": "Blumenau, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-jr-qcertifica-at-quick-soft-tecnologia-4452559111"
+    },
+    {
+      "id": "linkedin_4448075442",
+      "titulo": "Analista de Suporte - TOTVS",
+      "plataforma": "LinkedIn",
+      "local": "São Paulo, São Paulo, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-totvs-at-nucleo-engenharia-consultiva-s-a-4448075442"
+    },
+    {
+      "id": "linkedin_4444183429",
+      "titulo": "Analista de Suporte Junior | Afirmativa para pessoas com deficiência",
+      "plataforma": "LinkedIn",
+      "local": "Belo Horizonte, Minas Gerais, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-junior-afirmativa-para-pessoas-com-defici%C3%AAncia-at-linx-4444183429"
+    },
+    {
+      "id": "linkedin_4453616114",
+      "titulo": "Analista de Suporte",
+      "plataforma": "LinkedIn",
+      "local": "Chapecó, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-at-loy-legal-4453616114"
+    },
+    {
+      "id": "linkedin_4442898630",
+      "titulo": "Analista de Suporte TI Jr - Matriz Cuiabá",
+      "plataforma": "LinkedIn",
+      "local": "Cuiabá, Mato Grosso, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-ti-jr-matriz-cuiab%C3%A1-at-scheffer-oficial-4442898630"
+    },
+    {
+      "id": "linkedin_4448678643",
+      "titulo": "Analista de Suporte SAP S/4HANA Jr. | Espanhol Avançado",
+      "plataforma": "LinkedIn",
+      "local": "São Paulo, São Paulo, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/analista-de-suporte-sap-s-4hana-jr-espanhol-avan%C3%A7ado-at-sonda-4448678643"
+    },
+    {
+      "id": "linkedin_4448192654",
+      "titulo": "OPERADOR DE SUPORTE JR",
+      "plataforma": "LinkedIn",
+      "local": "Sorocaba, São Paulo, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/operador-de-suporte-jr-at-farma-ponte-4448192654"
+    },
+    {
+      "id": "linkedin_4453147548",
+      "titulo": "Suporte Técnico",
+      "plataforma": "LinkedIn",
+      "local": "Sinop, Mato Grosso, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-at-gb-online-4453147548"
+    },
+    {
+      "id": "linkedin_4452462570",
+      "titulo": "OPERADOR DE SUPORTE TÉCNICO INTERNO 1",
+      "plataforma": "LinkedIn",
+      "local": "Paranavaí, Paraná, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/operador-de-suporte-t%C3%A9cnico-interno-1-at-solu%C3%A7%C3%A3o-network-4452462570"
+    },
+    {
+      "id": "linkedin_4424366271",
+      "titulo": "Suporte Local\nDISPONIBILIDADE DE HORÁRIO",
+      "plataforma": "LinkedIn",
+      "local": "Uberlândia, Minas Gerais, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-local%0Adisponibilidade-de-hor%C3%A1rio-at-cebrac-rio-preto-4424366271"
+    },
+    {
+      "id": "linkedin_4449693556",
+      "titulo": "TECNICO DE SUPORTE",
+      "plataforma": "LinkedIn",
+      "local": "Brasília, Federal District, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/tecnico-de-suporte-at-casa-thomas-jefferson-4449693556"
+    },
+    {
+      "id": "linkedin_4443636651",
+      "titulo": "PESSOA TECNICA DE SUPORTE",
+      "plataforma": "LinkedIn",
+      "local": "São Paulo, São Paulo, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/pessoa-tecnica-de-suporte-at-hospital-alem%C3%A3o-oswaldo-cruz-4443636651"
+    },
+    {
+      "id": "linkedin_4453164367",
+      "titulo": "Suporte Técnico",
+      "plataforma": "LinkedIn",
+      "local": "Goiânia, Goiás, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-at-econo-rent-a-car-4453164367"
+    },
+    {
+      "id": "linkedin_4451462980",
+      "titulo": "Suporte Técnico | 12x36 das 09h00 ás 21h00",
+      "plataforma": "LinkedIn",
+      "local": "São José, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-12x36-das-09h00-%C3%A1s-21h00-at-porter-4451462980"
+    },
+    {
+      "id": "linkedin_4344200849",
+      "titulo": "Suporte técnico",
+      "plataforma": "LinkedIn",
+      "local": "Inhumas, Goiás, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-at-suasvendas-4344200849"
+    },
+    {
+      "id": "linkedin_4451467993",
+      "titulo": "Suporte Técnico | 12x36 das 10h00 ás 22h00",
+      "plataforma": "LinkedIn",
+      "local": "São José, Santa Catarina, Brazil",
+      "link": "https://br.linkedin.com/jobs/view/suporte-t%C3%A9cnico-12x36-das-10h00-%C3%A1s-22h00-at-porter-4451467993"
+    }
+  ]
 }
