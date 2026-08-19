@@ -25,7 +25,7 @@
       </div>
       <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
         <span class="text-xs text-slate-400 font-semibold block uppercase">Plataformas Ativas</span>
-        <span id="metricPlataformas" class="text-2xl font-bold text-amber-400">4/4</span>
+        <span id="metricPlataformas" class="text-2xl font-bold text-amber-400">6/6</span>
       </div>
     </div>
 
@@ -41,7 +41,7 @@
       <div class="grid grid-cols-2 gap-4 bg-slate-700 p-3 rounded border border-slate-600">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="platGupy" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Gupy (API)</span>
+          <span>Gupy (API/Scraper)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="platSolides" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
@@ -54,6 +54,14 @@
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="platIndeed" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Indeed (Scraper)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platRemotar" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <span>Remotar (Scraper)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platCoodesh" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <span>Coodesh (API)</span>
         </label>
       </div>
     </div>
@@ -133,7 +141,7 @@
         "Manager",
         "Especialista"
       ],
-      plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
+      plataformas: { gupy: true, solides: true, linkedin: true, indeed: true, remotar: true, coodesh: true }
     };
 
     function atualizarMetricaPlataformas() {
@@ -141,8 +149,11 @@
       const solides = document.getElementById("platSolides").checked ? 1 : 0;
       const linkedin = document.getElementById("platLinkedin").checked ? 1 : 0;
       const indeed = document.getElementById("platIndeed").checked ? 1 : 0;
-      const total = gupy + solides + linkedin + indeed;
-      document.getElementById("metricPlataformas").innerText = `${total}/4`;
+      const remotar = document.getElementById("platRemotar").checked ? 1 : 0;
+      const coodesh = document.getElementById("platCoodesh").checked ? 1 : 0;
+      
+      const total = gupy + solides + linkedin + indeed + remotar + coodesh;
+      document.getElementById("metricPlataformas").innerText = `${total}/6`;
     }
 
     function preencherFormulario(config) {
@@ -150,11 +161,14 @@
       document.getElementById("locais").value = config.locais.join(", ");
       document.getElementById("termosExcluir").value = (config.termos_excluir || []).join(", ");
       
-      const plats = config.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true };
+      const plats = config.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true, remotar: true, coodesh: true };
       document.getElementById("platGupy").checked = plats.gupy !== false;
       document.getElementById("platSolides").checked = plats.solides !== false;
       document.getElementById("platLinkedin").checked = plats.linkedin !== false;
       document.getElementById("platIndeed").checked = plats.indeed !== false;
+      document.getElementById("platRemotar").checked = plats.remotar !== false;
+      document.getElementById("platCoodesh").checked = plats.coodesh !== false;
+      
       atualizarMetricaPlataformas();
     }
 
@@ -195,7 +209,7 @@
         if (Array.isArray(historyData)) {
           total = historyData.length;
         } else if (typeof historyData === "object") {
-          total = (historyData.ids || []).length;
+          total = (historyData.ids || historyData.hashes || []).length;
           detalhes = historyData.detalhes || [];
         }
 
@@ -281,7 +295,9 @@
             gupy: document.getElementById("platGupy").checked,
             solides: document.getElementById("platSolides").checked,
             linkedin: document.getElementById("platLinkedin").checked,
-            indeed: document.getElementById("platIndeed").checked
+            indeed: document.getElementById("platIndeed").checked,
+            remotar: document.getElementById("platRemotar").checked,
+            coodesh: document.getElementById("platCoodesh").checked
           }
         };
 
