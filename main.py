@@ -54,7 +54,7 @@ def enviar_telegram(mensagem, link_vaga=None):
         })
 
     try:
-        res = requests.post(url, data=payload, timeout=10)
+        res = requests.post(url, data=payload, timeout=5)
         if res.status_code != 200:
             print(f"⚠️ Erro ao enviar Telegram: {res.text}")
     except Exception as e:
@@ -108,12 +108,12 @@ def buscar_gupy(termos, config):
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, */*"
     }
-    try:
-        for termo in termos:
-            url = f"https://portal.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&limit=20"
-            res = requests.get(url, headers=headers, timeout=10)
+    for termo in termos:
+        try:
+            url = f"https://portal.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200 and "json" in res.headers.get("Content-Type", "").lower():
                 data = res.json()
                 for item in data.get("data", []):
@@ -130,19 +130,19 @@ def buscar_gupy(termos, config):
                         "descricao": f"{titulo} {local}"
                     })
             else:
-                print(f"⚠️ Gupy respondeu com status {res.status_code} (não-JSON)", flush=True)
-    except Exception as e:
-        print(f"⚠️ Erro ao consultar Gupy: {e}", flush=True)
+                print(f"⚠️ Gupy respondeu com status {res.status_code} para '{termo}'", flush=True)
+        except Exception as e:
+            print(f"⚠️ Erro ao consultar Gupy ({termo}): {e}", flush=True)
     return vagas
 
 def buscar_solides(termos, config):
     vagas = []
     print("🔎 Consultando Sólides...", flush=True)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
-    try:
-        for termo in termos:
-            url = f"https://vacancies-api.solides.com.br/v1/vacancies/search?title={requests.utils.quote(termo)}&take=20"
-            res = requests.get(url, headers=headers, timeout=10)
+    for termo in termos:
+        try:
+            url = f"https://api.solides.jobs/v2/vacancies/search?title={requests.utils.quote(termo)}&take=20"
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 data = res.json()
                 for item in data.get("data", []):
@@ -160,18 +160,18 @@ def buscar_solides(termos, config):
                         "link": link,
                         "descricao": f"{titulo} {local}"
                     })
-    except Exception as e:
-        print(f"⚠️ Erro ao consultar Sólides: {e}", flush=True)
+        except Exception as e:
+            print(f"⚠️ Erro ao consultar Sólides ({termo}): {e}", flush=True)
     return vagas
 
 def buscar_linkedin(termos, config):
     vagas = []
     print("🔎 Scrapeando LinkedIn...", flush=True)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
-    try:
-        for termo in termos:
+    for termo in termos:
+        try:
             url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={requests.utils.quote(termo)}&location=Brasil&geoId=106057199&start=0"
-            res = requests.get(url, headers=headers, timeout=10)
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, "html.parser")
                 cards = soup.find_all("li")
@@ -193,18 +193,18 @@ def buscar_linkedin(termos, config):
                             "link": link,
                             "descricao": f"{titulo} {local}"
                         })
-    except Exception as e:
-        print(f"⚠️ Erro ao consultar LinkedIn: {e}", flush=True)
+        except Exception as e:
+            print(f"⚠️ Erro ao consultar LinkedIn ({termo}): {e}", flush=True)
     return vagas
 
 def buscar_indeed(termos, config):
     vagas = []
     print("🔎 Scrapeando Indeed...", flush=True)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
-    try:
-        for termo in termos:
+    for termo in termos:
+        try:
             url = f"https://br.indeed.com/jobs?q={requests.utils.quote(termo)}&l=Brasil"
-            res = requests.get(url, headers=headers, timeout=10)
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, "html.parser")
                 cards = soup.find_all("div", class_="job_seen_beacon")
@@ -227,8 +227,8 @@ def buscar_indeed(termos, config):
                             "link": link,
                             "descricao": f"{titulo} {local}"
                         })
-    except Exception as e:
-        print(f"⚠️ Erro ao consultar Indeed: {e}", flush=True)
+        except Exception as e:
+            print(f"⚠️ Erro ao consultar Indeed ({termo}): {e}", flush=True)
     return vagas
 
 def main():
