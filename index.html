@@ -3,21 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel AutoJob - Configurações</title>
+  <title>Painel AutoJob - Configurações & Métricas</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6 flex justify-center">
-  <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700">
+  <div class="max-w-3xl w-full bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700">
     <h1 class="text-2xl font-bold mb-6 text-indigo-400 flex items-center gap-2">
-      ⚙️ Gerenciador do AutoJob
+      ⚙️ Gerenciador & Dashboard do AutoJob
     </h1>
+
+    <!-- Dashboard Cards -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
+        <span class="text-xs text-slate-400 font-semibold block uppercase">Total no Histórico</span>
+        <span id="metricTotal" class="text-2xl font-bold text-indigo-400">0</span>
+      </div>
+      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
+        <span class="text-xs text-slate-400 font-semibold block uppercase">Últimas Rastreadas</span>
+        <span id="metricRecentes" class="text-2xl font-bold text-emerald-400">0</span>
+      </div>
+      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
+        <span class="text-xs text-slate-400 font-semibold block uppercase">Plataformas Ativas</span>
+        <span id="metricPlataformas" class="text-2xl font-bold text-amber-400">4/4</span>
+      </div>
+    </div>
 
     <!-- Token GitHub -->
     <div class="mb-6">
       <label class="block text-sm font-medium mb-2 text-slate-300">GitHub Personal Access Token (PAT):</label>
       <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
-      <p class="text-xs text-slate-400 mt-1">Salvo automaticamente no seu navegador por praticidade.</p>
     </div>
 
     <!-- Plataformas -->
@@ -25,19 +40,19 @@
       <label class="block text-sm font-medium mb-2 text-slate-300">Plataformas Ativas:</label>
       <div class="grid grid-cols-2 gap-4 bg-slate-700 p-3 rounded border border-slate-600">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platGupy" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <input type="checkbox" id="platGupy" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Gupy (API)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platSolides" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <input type="checkbox" id="platSolides" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Sólides (API)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platLinkedin" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <input type="checkbox" id="platLinkedin" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>LinkedIn (Scraper)</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platIndeed" class="w-4 h-4 text-indigo-600 rounded" checked>
+          <input type="checkbox" id="platIndeed" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
           <span>Indeed (Scraper)</span>
         </label>
       </div>
@@ -57,14 +72,22 @@
 
     <!-- Exclusões -->
     <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">Palavras para Excluir do Título (ex: Sênior, Estágio):</label>
+      <label class="block text-sm font-medium mb-2 text-slate-300">Palavras para Excluir do Título:</label>
       <input type="text" id="termosExcluir" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
     </div>
 
     <!-- Botões Principais -->
-    <div class="flex gap-4 mb-4">
+    <div class="flex gap-4 mb-6">
       <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar do GitHub</button>
       <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
+    </div>
+
+    <!-- Lista de Vagas Encontradas Recentemente -->
+    <div class="mb-6 border-t border-slate-700 pt-6">
+      <h2 class="text-lg font-bold text-indigo-300 mb-3">📋 Últimas Vagas Processadas</h2>
+      <div id="listaVagas" class="space-y-2 max-h-48 overflow-y-auto pr-2">
+        <p class="text-xs text-slate-400 italic">Carregando histórico do repositório...</p>
+      </div>
     </div>
 
     <!-- Disparar Action Manual -->
@@ -81,6 +104,7 @@
   <script>
     const REPO = "robsonmaiocchi/autojob";
     const FILE_PATH = "config.json";
+    const HISTORY_PATH = "history.json";
 
     const DEFAULT_CONFIG = {
       termos_busca: [
@@ -112,6 +136,15 @@
       plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
     };
 
+    function atualizarMetricaPlataformas() {
+      const gupy = document.getElementById("platGupy").checked ? 1 : 0;
+      const solides = document.getElementById("platSolides").checked ? 1 : 0;
+      const linkedin = document.getElementById("platLinkedin").checked ? 1 : 0;
+      const indeed = document.getElementById("platIndeed").checked ? 1 : 0;
+      const total = gupy + solides + linkedin + indeed;
+      document.getElementById("metricPlataformas").innerText = `${total}/4`;
+    }
+
     function preencherFormulario(config) {
       document.getElementById("termosBusca").value = config.termos_busca.join(", ");
       document.getElementById("locais").value = config.locais.join(", ");
@@ -122,6 +155,7 @@
       document.getElementById("platSolides").checked = plats.solides !== false;
       document.getElementById("platLinkedin").checked = plats.linkedin !== false;
       document.getElementById("platIndeed").checked = plats.indeed !== false;
+      atualizarMetricaPlataformas();
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -132,6 +166,7 @@
         document.getElementById("ghToken").value = savedToken;
         carregarConfig();
       }
+      carregarHistorico();
     });
 
     function base64ToUtf8(str) {
@@ -146,9 +181,51 @@
       return btoa(binary);
     }
 
-    async function obterShaAtual(token) {
+    async function carregarHistorico() {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${HISTORY_PATH}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const jsonText = base64ToUtf8(data.content.replace(/\n/g, ''));
+        const historyData = JSON.parse(jsonText);
+
+        let total = 0;
+        let detalhes = [];
+
+        if (Array.isArray(historyData)) {
+          total = historyData.length;
+        } else if (typeof historyData === "object") {
+          total = (historyData.ids || []).length;
+          detalhes = historyData.detalhes || [];
+        }
+
+        document.getElementById("metricTotal").innerText = total;
+        document.getElementById("metricRecentes").innerText = detalhes.length;
+
+        const container = document.getElementById("listaVagas");
+        if (detalhes.length === 0) {
+          container.innerHTML = `<p class="text-xs text-slate-400 italic">Nenhuma vaga processada recentemente.</p>`;
+          return;
+        }
+
+        container.innerHTML = detalhes.map(v => `
+          <div class="bg-slate-700/40 p-2.5 rounded border border-slate-600 flex justify-between items-center text-xs">
+            <div>
+              <span class="font-bold text-indigo-300">[${v.plataforma || 'Vaga'}]</span>
+              <span class="text-white ml-1">${v.titulo}</span>
+            </div>
+            ${v.link ? `<a href="${v.link}" target="_blank" class="text-emerald-400 hover:underline">Abrir 🔗</a>` : ''}
+          </div>
+        `).join('');
+
+      } catch (err) {
+        console.error("Erro ao carregar histórico:", err);
+      }
+    }
+
+    async function obterShaAtual(token, path) {
       const headers = token ? { "Authorization": `token ${token}` } : {};
-      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, { headers });
+      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, { headers });
       if (res.ok) {
         const data = await res.json();
         return data.sha;
@@ -163,18 +240,19 @@
       try {
         const headers = token ? { "Authorization": `token ${token}` } : {};
         const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, { headers });
-        if (!res.ok) throw new Error("Não foi possível carregar o arquivo.");
+        if (!res.ok) throw new Error("Não foi possível carregar a configuração.");
 
         const data = await res.json();
         const contentJson = base64ToUtf8(data.content.replace(/\n/g, ''));
         const content = JSON.parse(contentJson);
 
         preencherFormulario(content);
+        carregarHistorico();
 
-        status.innerText = "✅ Configuração atualizada com sucesso via GitHub!";
+        status.innerText = "✅ Configuração e métricas carregadas com sucesso!";
         status.className = "mt-4 text-center font-medium text-green-400";
       } catch (err) {
-        status.innerText = "⚠️ Exibindo valores pré-definidos (Clique em Salvar para enviar ao GitHub).";
+        status.innerText = "⚠️ Exibindo valores pré-definidos.";
         status.className = "mt-4 text-center font-medium text-amber-400";
       }
     }
@@ -189,14 +267,11 @@
       }
 
       localStorage.setItem("autojob_pat", token);
-      status.innerText = "Obtendo versão mais recente e salvando...";
+      status.innerText = "Obtendo SHA e salvando no GitHub...";
 
       try {
-        // Busca o SHA atualizado diretamente da API no momento do salvamento
-        const currentSha = await obterShaAtual(token);
-        if (!currentSha) {
-          throw new Error("Erro ao consultar a versão mais recente do arquivo no GitHub.");
-        }
+        const currentSha = await obterShaAtual(token, FILE_PATH);
+        if (!currentSha) throw new Error("Erro ao obter versão do arquivo.");
 
         const newConfig = {
           termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
@@ -214,7 +289,7 @@
         const contentBase64 = utf8ToBase64(jsonString);
 
         const body = {
-          message: "chore: atualiza filtros via painel web",
+          message: "chore: atualiza filtros e plataformas via painel web",
           content: contentBase64,
           sha: currentSha
         };
@@ -231,8 +306,6 @@
         if (res.ok) {
           status.innerText = "🚀 Filtros salvos com sucesso no GitHub!";
           status.className = "mt-4 text-center font-medium text-green-400";
-        } else if (res.status === 401 || res.status === 403) {
-          throw new Error("Erro de permissão ou token inválido.");
         } else {
           throw new Error(`Erro na API do GitHub (Status: ${res.status}).`);
         }
@@ -264,10 +337,10 @@
         });
 
         if (res.status === 204) {
-          status.innerText = "⚡ Varredura iniciada no GitHub Actions! Aguarde as mensagens no Telegram.";
+          status.innerText = "⚡ Varredura iniciada! Aguarde as notificações no Telegram.";
           status.className = "mt-4 text-center font-medium text-green-400";
         } else {
-          throw new Error("Falha ao disparar. Verifique se o token possui permissão workflow.");
+          throw new Error("Falha ao disparar. Verifique as permissões do Token.");
         }
       } catch (err) {
         status.innerText = `❌ ${err.message}`;

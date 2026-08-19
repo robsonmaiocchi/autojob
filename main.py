@@ -30,7 +30,7 @@ def salvar_json(caminho, dados):
     with open(caminho, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
 
-def enviar_telegram(mensagem):
+def enviar_telegram(mensagem, link_vaga=None):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Telegram não configurado (tokens ausentes).", flush=True)
         return
@@ -39,8 +39,19 @@ def enviar_telegram(mensagem):
         "chat_id": TELEGRAM_CHAT_ID,
         "text": mensagem,
         "parse_mode": "Markdown",
-        "disable_web_page_preview": False
+        "disable_web_page_preview": True
     }
+    
+    # Botão clicável (Inline Keyboard)
+    if link_vaga:
+        payload["reply_markup"] = {
+            "inline_keyboard": [
+                [
+                    {"text": "🌐 Abrir Vaga", "url": link_vaga}
+                ]
+            ]
+        }
+
     try:
         requests.post(url, json=payload, timeout=10)
     except Exception as e:
@@ -74,18 +85,18 @@ def validar_fit_vaga(titulo, local, descricao, config):
     local_norm = normalizar_texto(local)
     desc_norm = normalizar_texto(descricao)
 
-    # 1. Filtro de Exclusão
+    # 1. Exclusões
     for ex in config.get("termos_excluir", []):
         ex_norm = normalizar_texto(ex)
         if ex_norm and (ex_norm in titulo_norm or ex_norm in desc_norm):
             return False, "Possui termo de exclusão"
 
-    # 2. Filtro de Termos de Busca
+    # 2. Termos de Busca
     termo_match = any(normalizar_texto(t) in titulo_norm for t in config.get("termos_busca", []))
     if not termo_match:
         return False, "Título não bate com os termos de busca"
 
-    # 3. Filtro de Local
+    # 3. Local
     locais_config = [normalizar_texto(l) for l in config.get("locais", [])]
     local_match = any(l in local_norm or l in desc_norm for l in locais_config)
     if not local_match and "remoto" not in local_norm and "remoto" not in desc_norm:
@@ -93,7 +104,7 @@ def validar_fit_vaga(titulo, local, descricao, config):
 
     return True, "OK"
 
-# --- SCRAPERS / APIS COM RESILIÊNCIA ---
+# --- SCRAPERS / APIS ---
 
 def buscar_gupy(termos, config):
     vagas = []
@@ -179,11 +190,56 @@ def buscar_linkedin(termos, config):
         print(f"⚠️ Erro ao consultar LinkedIn: {e}", flush=True)
     return vagas
 
+def buscar_indeed(termos, config):
+    vagas = []
+    print("🔎 Scrapeando Indeed...", flush=True)
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        for termo in termos:
+            url = f"https://br.indeed.com/jobs?q={requests.utils.quote(termo)}&l=Brasil"
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200:
+                soup = BeautifulSoup(res.text, "html.parser")
+                cards = soup.find_all("div", class_="job_seen_beacon")
+                for card in cards:
+                    title_elem = card.find("h2", class_="jobTitle")
+                    loc_elem = card.find("div", class_="company_location")
+                    link_elem = card.find("a", href=True)
+                    
+                    if title_elem and link_elem:
+                        job_id = link_elem.get("data-jk", link_elem["href"][-10:])
+                        vaga_id = f"indeed_{job_id}"
+                        titulo = title_elem.text.strip()
+                        local = loc_elem.text.strip() if loc_elem else "Brasil"
+                        link = f"https://br.indeed.com/viewjob?jk={job_id}" if "jk=" not in link_elem["href"] else f"https://br.indeed.com{link_elem['href']}"
+                        vagas.append({
+                            "id": vaga_id,
+                            "titulo": titulo,
+                            "plataforma": "Indeed",
+                            "local": local,
+                            "link": link,
+                            "descricao": f"{titulo} {local}"
+                        })
+    except Exception as e:
+        print(f"⚠️ Erro ao consultar Indeed: {e}", flush=True)
+    return vagas
+
 # --- FLUXO PRINCIPAL ---
 def main():
     config = carregar_json(CONFIG_FILE, {})
-    historico = carregar_json(HISTORY_FILE, [])
     
+    # Tratamento de formato para suporte ao histórico estendido de métricas
+    historico_raw = carregar_json(HISTORY_FILE, [])
+    if isinstance(historico_raw, list) and len(historico_raw) > 0 and isinstance(historico_raw[0], str):
+        historico_ids = set(historico_raw)
+        historico_detalhado = [{"id": i, "plataforma": i.split("_")[0].capitalize(), "titulo": "Vaga Anterior"} for i in historico_raw]
+    elif isinstance(historico_raw, dict):
+        historico_ids = set(historico_raw.get("ids", []))
+        historico_detalhado = historico_raw.get("detalhes", [])
+    else:
+        historico_ids = set()
+        historico_detalhado = []
+
     plataformas_ativas = config.get("plataformas", {})
     termos = config.get("termos_busca", [])
     
@@ -195,12 +251,14 @@ def main():
         todas_vagas.extend(buscar_solides(termos, config))
     if plataformas_ativas.get("linkedin", True):
         todas_vagas.extend(buscar_linkedin(termos, config))
+    if plataformas_ativas.get("indeed", True):
+        todas_vagas.extend(buscar_indeed(termos, config))
 
     novas_vagas = 0
-    print(f"Total de vagas capturadas nas APIs: {len(todas_vagas)}", flush=True)
+    print(f"Total de vagas capturadas nas APIs/Scrapers: {len(todas_vagas)}", flush=True)
 
     for vaga in todas_vagas:
-        if vaga["id"] in historico:
+        if vaga["id"] in historico_ids:
             continue
 
         passou_filtro, razao = validar_fit_vaga(vaga["titulo"], vaga["local"], vaga["descricao"], config)
@@ -209,24 +267,34 @@ def main():
             modalidade = analisar_modalidade(vaga["local"] + " " + vaga["descricao"])
             stack = extrair_stack_tecnologia(vaga["descricao"])
             
-            # Formatação refinada da notificação Telegram
             msg = (
                 f"🎯 *NOVA VAGA ENCONTRADA*\n\n"
                 f"📌 *Cargo:* {vaga['titulo']}\n"
                 f"🏢 *Plataforma:* {vaga['plataforma']}\n"
                 f"📍 *Modalidade:* {modalidade}\n"
-                f"🛠️ *Stack/Tecnologias:* {stack}\n"
-                f"🔗 *Link:* [Candidatar-se na Vaga]({vaga['link']})"
+                f"🛠️ *Stack/Tecnologias:* {stack}"
             )
             
-            enviar_telegram(msg)
-            historico.append(vaga["id"])
+            enviar_telegram(msg, link_vaga=vaga["link"])
+            
+            historico_ids.add(vaga["id"])
+            historico_detalhado.insert(0, {
+                "id": vaga["id"],
+                "titulo": vaga["titulo"],
+                "plataforma": vaga["plataforma"],
+                "local": vaga["local"],
+                "link": vaga["link"]
+            })
             novas_vagas += 1
         else:
-            # Registra no histórico para não reprocessar vagas que não deram fit
-            historico.append(vaga["id"])
+            historico_ids.add(vaga["id"])
 
-    salvar_json(HISTORY_FILE, historico)
+    # Salva histórico estruturado para alimentar o Painel Web
+    dados_historico = {
+        "ids": list(historico_ids),
+        "detalhes": historico_detalhado[:100]  # Mantém os últimos 100 registros
+    }
+    salvar_json(HISTORY_FILE, dados_historico)
     print(f"✅ Processamento finalizado! {novas_vagas} novas vagas enviadas ao Telegram.", flush=True)
 
 if __name__ == "__main__":
