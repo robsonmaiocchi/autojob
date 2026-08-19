@@ -61,7 +61,7 @@ def salvar_historico(hashes, detalhes):
     with open("history.json", "w", encoding="utf-8") as f:
         json.dump({"hashes": list(hashes), "detalhes": detalhes[:200]}, f, ensure_ascii=False, indent=2)
 
-def enviar_telegram(mensagem, link_vaga=None):
+def enviar_telegram(mensagem, link_vaga=None, vaga_id=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Token ou Chat ID do Telegram não configurados.")
         return
@@ -74,11 +74,13 @@ def enviar_telegram(mensagem, link_vaga=None):
     }
 
     if link_vaga:
-        payload["reply_markup"] = json.dumps({
-            "inline_keyboard": [[
-                {"text": "🌐 Abrir Vaga", "url": link_vaga}
-            ]]
-        })
+        buttons = [[{"text": "🌐 Abrir Vaga", "url": link_vaga}]]
+        if vaga_id:
+            buttons.append([
+                {"text": "📌 Guardar", "callback_data": f"save_{vaga_id}"},
+                {"text": "✅ Aplicada", "callback_data": f"applied_{vaga_id}"}
+            ])
+        payload["reply_markup"] = json.dumps({"inline_keyboard": buttons})
 
     try:
         res = requests.post(url, data=payload, timeout=8)
@@ -125,26 +127,17 @@ def calcular_score_fit(titulo, local, descricao, config):
     if not passou_local:
         return 0, f"Localização fora do perfil ({local})"
 
-    # Pontuação dinâmica de Match (Base: 50%)
+    # Pontuação dinâmica de Match
     score = 50
 
-    # Modalidade
     if "remoto" in texto_completo or "home office" in texto_completo:
         score += 15
-
-    # Contexto de Negócio & SaaS
     if "saas" in texto_completo or "software as a service" in texto_completo:
         score += 10
-
-    # Ferramentas ITSM / Helpdesk
     if any(k in texto_completo for k in ["zendesk", "jira", "servicenow", "freshdesk"]):
         score += 10
-
-    # Banco de Dados & Infra
     if any(k in texto_completo for k in ["sql", "postgresql", "mysql", "linux", "aws", "api", "rest"]):
         score += 10
-
-    # Linguagens / Desenvolvimento
     if any(k in texto_completo for k in ["python", "kotlin", "salesforce"]):
         score += 5
 
@@ -354,6 +347,7 @@ def main():
     print(f"\n📊 Total de vagas capturadas de todas as fontes: {len(todas_vagas)}", flush=True)
 
     novas_vagas = 0
+    scores_lista = []
 
     for vaga in todas_vagas:
         hash_vaga = gerar_hash_deduplicacao(vaga["titulo"], vaga["local"])
@@ -377,7 +371,7 @@ def main():
                 f"🛠️ *Stack / Ferramentas:* {stack}"
             )
             
-            enviar_telegram(msg, link_vaga=vaga["link"])
+            enviar_telegram(msg, link_vaga=vaga["link"], vaga_id=vaga["id"])
             
             historico_hashes.add(hash_vaga)
             historico_hashes.add(vaga["id"])
@@ -389,14 +383,27 @@ def main():
                 "plataforma": vaga["plataforma"],
                 "local": vaga["local"],
                 "score": score,
+                "status": "novo",
                 "link": vaga["link"]
             })
             novas_vagas += 1
+            scores_lista.append(score)
         else:
             print(f"❌ Rejeitada [{vaga['plataforma']}]: {vaga['titulo']} -> {razao}", flush=True)
             historico_hashes.add(hash_vaga)
 
     salvar_historico(historico_hashes, historico_detalhado)
+    
+    if novas_vagas > 0:
+        media_score = sum(scores_lista) // len(scores_lista)
+        resumo_msg = (
+            f"📈 *RESUMO DA EXECUÇÃO*\n\n"
+            f"🔍 *Vagas Varridas:* {len(todas_vagas)}\n"
+            f"✅ *Novas Vagas Aprovadas:* {novas_vagas}\n"
+            f"📊 *Score Médio de Compatibilidade:* {media_score}%"
+        )
+        enviar_telegram(resumo_msg)
+
     print(f"✅ Processamento finalizado! {novas_vagas} novas vagas enviadas ao Telegram.", flush=True)
 
 if __name__ == "__main__":
