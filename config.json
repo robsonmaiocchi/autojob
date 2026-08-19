@@ -1,14 +1,17 @@
 {
   "termos_busca": [
-    "Analista de Suporte Tecnico",
-    "Suporte SaaS",
-    "Suporte Tecnico",
-    "Technical Support Analyst"
+    "Suporte",
+    "Support",
+    "Analista de Suporte"
   ],
   "locais": [
     "Remoto",
+    "Brasil",
+    "BR",
+    "Santa Catarina",
     "Imbituba",
-    "Tubarão"
+    "Tubarão",
+    "Curitiba"
   ],
   "termos_excluir": [
     "Estágio",
