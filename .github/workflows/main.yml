@@ -2,7 +2,6 @@ name: Job Search Automation
 
 on:
   schedule:
-    # 08:00 e 20:00 Horário de Brasília (11:00 e 23:00 UTC)
     - cron: '0 11,23 * * *'
   workflow_dispatch:
 
