@@ -25,8 +25,8 @@ def gerar_hash_deduplicacao(titulo, local):
 
 def carregar_configuracao():
     config_default = {
-        "termos_busca": ["suporte", "analista de suporte", "support", "helpdesk"],
-        "termos_exclusao": ["estagio", "estágio", "intern", "senior", "sênior", "director", "diretor", "manager", "gerente"],
+        "termos_busca": ["suporte", "analista de suporte", "support", "helpdesk", "technical support", "suporte tecnico"],
+        "termos_exclusao": ["estagio", "estágio", "intern", "senior", "sênior", "director", "diretor", "manager", "gerente", "lead", "coordenador"],
         "locais_permitidos": [
             "remoto", "brasil", "br", 
             "santa catarina", "sc", "imbituba", "tubarao", "tubarão", 
@@ -59,7 +59,7 @@ def carregar_historico():
 
 def salvar_historico(hashes, detalhes):
     with open("history.json", "w", encoding="utf-8") as f:
-        json.dump({"hashes": list(hashes), "detalhes": detalhes[:150]}, f, ensure_ascii=False, indent=2)
+        json.dump({"hashes": list(hashes), "detalhes": detalhes[:200]}, f, ensure_ascii=False, indent=2)
 
 def enviar_telegram(mensagem, link_vaga=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -87,10 +87,26 @@ def enviar_telegram(mensagem, link_vaga=None):
     except Exception as e:
         print(f"⚠️ Exceção ao enviar mensagem Telegram: {e}")
 
+def detectar_senioridade(texto):
+    """Mapeia o nível de senioridade no título ou na descrição."""
+    texto_norm = normalizar_texto(texto)
+    
+    if any(k in texto_norm for k in ["senior", "sênior", "lead", "principal", "head", "gerente", "coordenador"]):
+        return "Sênior / Liderança 🛑"
+    elif any(k in texto_norm for k in ["pleno", "pl", "mid", "level 2", "n2", "nivel 2"]):
+        return "Pleno (N2) 🟢"
+    elif any(k in texto_norm for k in ["junior", "júnior", "jr", "level 1", "n1", "nivel 1", "entry"]):
+        return "Júnior (N1) 🟢"
+    elif any(k in texto_norm for k in ["estagio", "estágio", "intern", "trainee"]):
+        return "Estágio / Trainee 🟡"
+    
+    return "Júnior / Pleno (Geral) 🟢"
+
 def calcular_score_fit(titulo, local, descricao, config):
     titulo_norm = normalizar_texto(titulo)
     desc_norm = normalizar_texto(descricao)
     local_norm = normalizar_texto(local)
+    texto_completo = f"{titulo_norm} {desc_norm} {local_norm}"
 
     # 1. Verificar termos de exclusão
     for ex in config.get("termos_exclusao", []):
@@ -105,17 +121,32 @@ def calcular_score_fit(titulo, local, descricao, config):
 
     # 3. Verificar localização / modalidade
     locais_permitidos = [normalizar_texto(l) for l in config.get("locais_permitidos", [])]
-    texto_checar = f"{local_norm} {desc_norm}"
-    passou_local = any(loc in texto_checar for loc in locais_permitidos)
+    passou_local = any(loc in texto_completo for loc in locais_permitidos)
     if not passou_local:
         return 0, f"Localização fora do perfil ({local})"
 
-    # Pontuação dinâmica de Match
-    score = 70  # Base para vagas aprovadas
-    if "remoto" in texto_checar or "home office" in texto_checar:
+    # Pontuação dinâmica de Match (Base: 50%)
+    score = 50
+
+    # Modalidade
+    if "remoto" in texto_completo or "home office" in texto_completo:
         score += 15
-    if any(k in desc_norm or k in titulo_norm for k in ["saas", "sql", "linux", "zendesk", "jira", "aws"]):
-        score += 15
+
+    # Contexto de Negócio & SaaS
+    if "saas" in texto_completo or "software as a service" in texto_completo:
+        score += 10
+
+    # Ferramentas ITSM / Helpdesk
+    if any(k in texto_completo for k in ["zendesk", "jira", "servicenow", "freshdesk"]):
+        score += 10
+
+    # Banco de Dados & Infra
+    if any(k in texto_completo for k in ["sql", "postgresql", "mysql", "linux", "aws", "api", "rest"]):
+        score += 10
+
+    # Linguagens / Desenvolvimento
+    if any(k in texto_completo for k in ["python", "kotlin", "salesforce"]):
+        score += 5
 
     return min(score, 100), "Aprovada"
 
@@ -130,7 +161,7 @@ def analisar_modalidade(texto):
     return "Remoto / Não especificada 📍"
 
 def extrair_stack_tecnologia(texto):
-    tecnologias = ["python", "sql", "kotlin", "salesforce", "aws", "linux", "zendesk", "jira", "docker", "git", "saas"]
+    tecnologias = ["python", "sql", "kotlin", "salesforce", "aws", "linux", "zendesk", "jira", "servicenow", "docker", "git", "saas", "api"]
     encontradas = []
     texto_norm = normalizar_texto(texto)
     for tech in tecnologias:
@@ -252,7 +283,6 @@ def buscar_linkedin(termos, config):
     return vagas
 
 def buscar_remotar(termos, config):
-    """Nova fonte: Remotar (Vagas 100% remotas no BR)"""
     vagas = []
     print("🔎 Consultando Remotar...", flush=True)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -283,7 +313,6 @@ def buscar_remotar(termos, config):
     return vagas
 
 def buscar_coodesh(termos, config):
-    """Nova fonte: Coodesh (Vagas de TI e Suporte Técnico)"""
     vagas = []
     print("🔎 Consultando Coodesh...", flush=True)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -329,7 +358,6 @@ def main():
     for vaga in todas_vagas:
         hash_vaga = gerar_hash_deduplicacao(vaga["titulo"], vaga["local"])
         
-        # Validação de deduplicação cross-platform
         if hash_vaga in historico_hashes or vaga["id"] in historico_hashes:
             continue
 
@@ -337,14 +365,16 @@ def main():
         
         if score > 0:
             modalidade = analisar_modalidade(vaga["local"] + " " + vaga["descricao"])
+            senioridade = detectar_senioridade(vaga["titulo"] + " " + vaga["descricao"])
             stack = extrair_stack_tecnologia(vaga["descricao"])
             
             msg = (
                 f"🎯 *NOVA VAGA ENCONTRADA* (Fit: {score}%)\n\n"
                 f"📌 *Cargo:* {vaga['titulo']}\n"
+                f"👤 *Senioridade:* {senioridade}\n"
                 f"🏢 *Plataforma:* {vaga['plataforma']}\n"
                 f"📍 *Modalidade:* {modalidade}\n"
-                f"🛠️ *Stack/Tecnologias:* {stack}"
+                f"🛠️ *Stack / Ferramentas:* {stack}"
             )
             
             enviar_telegram(msg, link_vaga=vaga["link"])
@@ -355,6 +385,7 @@ def main():
                 "id": vaga["id"],
                 "hash": hash_vaga,
                 "titulo": vaga["titulo"],
+                "senioridade": senioridade,
                 "plataforma": vaga["plataforma"],
                 "local": vaga["local"],
                 "score": score,
