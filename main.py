@@ -61,7 +61,7 @@ def salvar_historico(hashes, detalhes):
     with open("history.json", "w", encoding="utf-8") as f:
         json.dump({"hashes": list(hashes), "detalhes": detalhes[:200]}, f, ensure_ascii=False, indent=2)
 
-def enviar_telegram(mensagem, link_vaga=None, vaga_id=None):
+def enviar_telegram(mensagem, link_vaga=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Token ou Chat ID do Telegram não configurados.")
         return
@@ -74,13 +74,9 @@ def enviar_telegram(mensagem, link_vaga=None, vaga_id=None):
     }
 
     if link_vaga:
-        buttons = [[{"text": "🌐 Abrir Vaga", "url": link_vaga}]]
-        if vaga_id:
-            buttons.append([
-                {"text": "📌 Guardar", "callback_data": f"save_{vaga_id}"},
-                {"text": "✅ Aplicada", "callback_data": f"applied_{vaga_id}"}
-            ])
-        payload["reply_markup"] = json.dumps({"inline_keyboard": buttons})
+        payload["reply_markup"] = json.dumps({
+            "inline_keyboard": [[{"text": "🌐 Abrir Vaga", "url": link_vaga}]]
+        })
 
     try:
         res = requests.post(url, data=payload, timeout=8)
@@ -110,24 +106,24 @@ def calcular_score_fit(titulo, local, descricao, config):
     local_norm = normalizar_texto(local)
     texto_completo = f"{titulo_norm} {desc_norm} {local_norm}"
 
-    # 1. Verificar termos de exclusão
+    # 1. Termos de exclusão
     for ex in config.get("termos_exclusao", []):
         if normalizar_texto(ex) in titulo_norm:
             return 0, f"Contém termo de exclusão '{ex}'"
 
-    # 2. Verificar termos de busca no título
+    # 2. Termos de busca no título
     termos_busca = [normalizar_texto(t) for t in config.get("termos_busca", [])]
     passou_termo = any(t in titulo_norm for t in termos_busca)
     if not passou_termo:
         return 0, "Título não bate com os termos de busca"
 
-    # 3. Verificar localização / modalidade
+    # 3. Localização / modalidade
     locais_permitidos = [normalizar_texto(l) for l in config.get("locais_permitidos", [])]
     passou_local = any(loc in texto_completo for loc in locais_permitidos)
     if not passou_local:
         return 0, f"Localização fora do perfil ({local})"
 
-    # Pontuação dinâmica de Match
+    # Pontuação dinâmica
     score = 50
 
     if "remoto" in texto_completo or "home office" in texto_completo:
@@ -162,7 +158,7 @@ def extrair_stack_tecnologia(texto):
             encontradas.append(tech.upper() if len(tech) <= 4 else tech.capitalize())
     return ", ".join(encontradas) if encontradas else "Geral / Suporte Técnico"
 
-# --- SCRAPERS / APIS ---
+# --- SCRAPERS ---
 
 def buscar_gupy(termos, config):
     vagas = []
@@ -275,6 +271,53 @@ def buscar_linkedin(termos, config):
             print(f"⚠️ Erro LinkedIn ({termo}): {e}", flush=True)
     return vagas
 
+def buscar_indeed(termos, config):
+    vagas = []
+    print("🔎 Consultando Indeed (via Playwright)...", flush=True)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 820}
+            )
+            page = context.new_page()
+
+            for termo in termos:
+                try:
+                    url = f"https://br.indeed.com/jobs?q={requests.utils.quote(termo)}&l=Brasil"
+                    page.goto(url, wait_until="domcontentloaded", timeout=20000)
+
+                    cards = page.locator('a[id^="job_"]').all()
+                    for card in cards[:10]:
+                        try:
+                            job_id = card.get_attribute("data-jk") or card.get_attribute("id")
+                            if not job_id:
+                                continue
+                            
+                            link = f"https://br.indeed.com/viewjob?jk={job_id}"
+                            titulo = card.inner_text().split("\n")[0] if card.inner_text() else termo
+
+                            vagas.append({
+                                "id": f"indeed_{job_id}",
+                                "titulo": titulo.strip(),
+                                "plataforma": "Indeed",
+                                "local": "Brasil / Remoto",
+                                "link": link,
+                                "descricao": f"{titulo} Indeed Brasil"
+                            })
+                        except Exception:
+                            continue
+                except Exception as e:
+                    print(f"⚠️ Erro Indeed no termo '{termo}': {e}", flush=True)
+
+            browser.close()
+    except Exception as e_pw:
+        print(f"⚠️ Falha geral no Playwright (Indeed): {e_pw}", flush=True)
+
+    return vagas
+
 def buscar_remotar(termos, config):
     vagas = []
     print("🔎 Consultando Remotar...", flush=True)
@@ -338,9 +381,12 @@ def main():
     termos = config.get("termos_busca", ["suporte"])
     
     todas_vagas = []
+    
+    # Executando todas as 6 fontes ativas
     todas_vagas.extend(buscar_gupy(termos, config))
     todas_vagas.extend(buscar_solides(termos, config))
     todas_vagas.extend(buscar_linkedin(termos, config))
+    todas_vagas.extend(buscar_indeed(termos, config))
     todas_vagas.extend(buscar_remotar(termos, config))
     todas_vagas.extend(buscar_coodesh(termos, config))
 
@@ -371,7 +417,7 @@ def main():
                 f"🛠️ *Stack / Ferramentas:* {stack}"
             )
             
-            enviar_telegram(msg, link_vaga=vaga["link"], vaga_id=vaga["id"])
+            enviar_telegram(msg, link_vaga=vaga["link"])
             
             historico_hashes.add(hash_vaga)
             historico_hashes.add(vaga["id"])
@@ -383,7 +429,6 @@ def main():
                 "plataforma": vaga["plataforma"],
                 "local": vaga["local"],
                 "score": score,
-                "status": "novo",
                 "link": vaga["link"]
             })
             novas_vagas += 1
