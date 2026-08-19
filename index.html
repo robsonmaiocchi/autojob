@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel AutoJob - Configurações</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6 flex justify-center">
@@ -82,7 +83,6 @@
     const FILE_PATH = "config.json";
     let fileSha = "";
 
-    // Carrega o PAT salvo do LocalStorage ao abrir a página
     document.addEventListener("DOMContentLoaded", () => {
       const savedToken = localStorage.getItem("autojob_pat");
       if (savedToken) {
@@ -118,7 +118,6 @@
         document.getElementById("locais").value = content.locais.join(", ");
         document.getElementById("termosExcluir").value = (content.termos_excluir || []).join(", ");
         
-        // Checkboxes de Plataformas
         const plats = content.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true };
         document.getElementById("platGupy").checked = plats.gupy !== false;
         document.getElementById("platSolides").checked = plats.solides !== false;
@@ -142,9 +141,7 @@
         return;
       }
 
-      // Salva no LocalStorage do navegador
       localStorage.setItem("autojob_pat", token);
-
       status.innerText = "Salvando...";
 
       const newConfig = {
