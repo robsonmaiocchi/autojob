@@ -1,21 +1,17 @@
-name: Job Search Automation
+name: AutoJob Bot Scraper
 
 on:
-  push:
-    branches: [ "main" ]
   schedule:
-    - cron: '0 11,23 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    # Executa a cada 6 horas
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Permite disparar manualmente via Painel Web / GitHub
 
 jobs:
-  run-scraper:
+  run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -23,22 +19,22 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install playwright requests
-          playwright install --with-deps chromium
+          pip install requests playwright
+          playwright install chromium
 
-      - name: Run Scraper
+      - name: Run AutoJob Script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
-      - name: Commit and Push sent jobs history
+      - name: Commit and Push Updated History
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add vagas_enviadas.json || true
-          git commit -m "chore: update sent jobs history" || exit 0
+          git add vagas_enviadas.json
+          git commit -m "chore: atualiza historico de vagas [skip ci]" || exit 0
           git push

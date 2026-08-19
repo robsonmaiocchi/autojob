@@ -16,7 +16,30 @@
     <div class="mb-6">
       <label class="block text-sm font-medium mb-2 text-slate-300">GitHub Personal Access Token (PAT):</label>
       <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
-      <p class="text-xs text-slate-400 mt-1">Necessário com permissão de escrita no repositório.</p>
+      <p class="text-xs text-slate-400 mt-1">Salvo automaticamente no seu navegador por praticidade.</p>
+    </div>
+
+    <!-- Plataformas -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Plataformas Ativas:</label>
+      <div class="grid grid-cols-2 gap-4 bg-slate-700 p-3 rounded border border-slate-600">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platGupy" class="w-4 h-4 text-indigo-600 rounded">
+          <span>Gupy (API)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platSolides" class="w-4 h-4 text-indigo-600 rounded">
+          <span>Sólides (API)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platLinkedin" class="w-4 h-4 text-indigo-600 rounded">
+          <span>LinkedIn (Scraper)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="platIndeed" class="w-4 h-4 text-indigo-600 rounded">
+          <span>Indeed (Scraper)</span>
+        </label>
+      </div>
     </div>
 
     <!-- Termos de Busca -->
@@ -37,10 +60,18 @@
       <input type="text" id="termosExcluir" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
     </div>
 
-    <!-- Botões -->
-    <div class="flex gap-4">
+    <!-- Botões Principais -->
+    <div class="flex gap-4 mb-4">
       <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar Atual</button>
       <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
+    </div>
+
+    <!-- Disparar Action Manual -->
+    <div class="pt-4 border-t border-slate-700 flex justify-between items-center">
+      <span class="text-sm text-slate-400">Quer buscar vagas agora?</span>
+      <button onclick="dispararVarredura()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-semibold text-sm transition flex items-center gap-1">
+        🚀 Executar Varredura Agora
+      </button>
     </div>
 
     <div id="status" class="mt-4 text-center font-medium"></div>
@@ -49,8 +80,16 @@
   <script>
     const REPO = "robsonmaiocchi/autojob";
     const FILE_PATH = "config.json";
-
     let fileSha = "";
+
+    // Carrega o PAT salvo do LocalStorage ao abrir a página
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedToken = localStorage.getItem("autojob_pat");
+      if (savedToken) {
+        document.getElementById("ghToken").value = savedToken;
+        carregarConfig();
+      }
+    });
 
     function base64ToUtf8(str) {
       const bytes = Uint8Array.from(atob(str), c => c.charCodeAt(0));
@@ -78,6 +117,14 @@
         document.getElementById("termosBusca").value = content.termos_busca.join(", ");
         document.getElementById("locais").value = content.locais.join(", ");
         document.getElementById("termosExcluir").value = (content.termos_excluir || []).join(", ");
+        
+        // Checkboxes de Plataformas
+        const plats = content.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true };
+        document.getElementById("platGupy").checked = plats.gupy !== false;
+        document.getElementById("platSolides").checked = plats.solides !== false;
+        document.getElementById("platLinkedin").checked = plats.linkedin !== false;
+        document.getElementById("platIndeed").checked = plats.indeed !== false;
+
         status.innerText = "✅ Configuração carregada com sucesso!";
         status.className = "mt-4 text-center font-medium text-green-400";
       } catch (err) {
@@ -95,13 +142,21 @@
         return;
       }
 
+      // Salva no LocalStorage do navegador
+      localStorage.setItem("autojob_pat", token);
+
       status.innerText = "Salvando...";
 
       const newConfig = {
         termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
         locais: document.getElementById("locais").value.split(",").map(s => s.trim()).filter(Boolean),
         termos_excluir: document.getElementById("termosExcluir").value.split(",").map(s => s.trim()).filter(Boolean),
-        plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
+        plataformas: {
+          gupy: document.getElementById("platGupy").checked,
+          solides: document.getElementById("platSolides").checked,
+          linkedin: document.getElementById("platLinkedin").checked,
+          indeed: document.getElementById("platIndeed").checked
+        }
       };
 
       const jsonString = JSON.stringify(newConfig, null, 2);
@@ -126,10 +181,43 @@
         if (res.ok) {
           const resData = await res.json();
           fileSha = resData.content.sha;
-          status.innerText = "🚀 Salvo com sucesso! Acentuação preservada.";
+          status.innerText = "🚀 Salvo com sucesso no GitHub!";
           status.className = "mt-4 text-center font-medium text-green-400";
         } else {
           throw new Error("Erro de permissão ou token inválido");
+        }
+      } catch (err) {
+        status.innerText = `❌ ${err.message}`;
+        status.className = "mt-4 text-center font-medium text-red-400";
+      }
+    }
+
+    async function dispararVarredura() {
+      const token = document.getElementById("ghToken").value;
+      const status = document.getElementById("status");
+
+      if (!token) {
+        alert("Insira seu GitHub Personal Access Token!");
+        return;
+      }
+
+      status.innerText = "Solicitando execução da varredura...";
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/main.yml/dispatches`, {
+          method: "POST",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ ref: "main" })
+        });
+
+        if (res.status === 204) {
+          status.innerText = "⚡ Varredura iniciada no GitHub Actions! Aguarde as mensagens no Telegram.";
+          status.className = "mt-4 text-center font-medium text-green-400";
+        } else {
+          throw new Error("Falha ao disparar. Verifique se o token possui permissão workflow.");
         }
       } catch (err) {
         status.innerText = `❌ ${err.message}`;

@@ -75,8 +75,7 @@ def enviar_telegram(vaga):
         f"📌 *Cargo:* {vaga['titulo']}\n"
         f"🏢 *Empresa:* {vaga['empresa']}\n"
         f"📍 *Local/Modalidade:* {vaga['local']}\n"
-        f"🌐 *Plataforma:* {vaga['plataforma']}\n\n"
-        f"🔗 [Acessar Vaga]({vaga['link']})"
+        f"🌐 *Plataforma:* {vaga['plataforma']}"
     )
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -84,7 +83,13 @@ def enviar_telegram(vaga):
         "chat_id": TELEGRAM_CHAT_ID,
         "text": mensagem,
         "parse_mode": "Markdown",
-        "disable_web_page_preview": False
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {"text": "🌐 Abrir Vaga no Navegador", "url": vaga['link']}
+                ]
+            ]
+        }
     }
 
     res = requests.post(url, json=payload)
@@ -260,7 +265,7 @@ def main():
     historico = carregar_historico()
     vagas_para_enviar = []
 
-    print("🔎 Iniciando varredura com inteligência de filtro UTF-8...")
+    print("🔎 Iniciando varredura com inteligência de filtro UTF-8 e botões interativos...")
 
     # 1. APIs
     for termo in TERMOS_BUSCA:
