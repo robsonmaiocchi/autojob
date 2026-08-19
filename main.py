@@ -107,28 +107,31 @@ def buscar_gupy(termos, config):
     vagas = []
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
     }
     for termo in termos:
         try:
-            url = f"https://portal.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
+            url = f"https://portal.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&offset=0&limit=20"
             res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200 and "json" in res.headers.get("Content-Type", "").lower():
-                data = res.json()
-                for item in data.get("data", []):
-                    id_vaga = f"gupy_{item.get('id')}"
-                    titulo = item.get("name", "")
-                    local = "Remoto" if item.get("isRemoteWork") else f"{item.get('city', '')} - {item.get('state', '')}"
-                    link = item.get("jobUrl", "")
-                    vagas.append({
-                        "id": id_vaga,
-                        "titulo": titulo,
-                        "plataforma": "Gupy",
-                        "local": local,
-                        "link": link,
-                        "descricao": f"{titulo} {local}"
-                    })
+            if res.status_code == 200:
+                try:
+                    data = res.json()
+                    for item in data.get("data", []):
+                        id_vaga = f"gupy_{item.get('id')}"
+                        titulo = item.get("name", "")
+                        local = "Remoto" if item.get("isRemoteWork") else f"{item.get('city', '')} - {item.get('state', '')}"
+                        link = item.get("jobUrl", "")
+                        vagas.append({
+                            "id": id_vaga,
+                            "titulo": titulo,
+                            "plataforma": "Gupy",
+                            "local": local,
+                            "link": link,
+                            "descricao": f"{titulo} {local}"
+                        })
+                except Exception:
+                    print(f"⚠️ Gupy bloqueou resposta JSON para '{termo}'", flush=True)
             else:
                 print(f"⚠️ Gupy respondeu com status {res.status_code} para '{termo}'", flush=True)
         except Exception as e:
@@ -138,7 +141,7 @@ def buscar_gupy(termos, config):
 def buscar_solides(termos, config):
     vagas = []
     print("🔎 Consultando Sólides...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
     for termo in termos:
         try:
             url = f"https://api.solides.jobs/v2/vacancies/search?title={requests.utils.quote(termo)}&take=20"
@@ -167,7 +170,7 @@ def buscar_solides(termos, config):
 def buscar_linkedin(termos, config):
     vagas = []
     print("🔎 Scrapeando LinkedIn...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
     for termo in termos:
         try:
             url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={requests.utils.quote(termo)}&location=Brasil&geoId=106057199&start=0"
@@ -200,7 +203,7 @@ def buscar_linkedin(termos, config):
 def buscar_indeed(termos, config):
     vagas = []
     print("🔎 Scrapeando Indeed...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
     for termo in termos:
         try:
             url = f"https://br.indeed.com/jobs?q={requests.utils.quote(termo)}&l=Brasil"
