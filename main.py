@@ -14,7 +14,7 @@ def carregar_configuracao():
     return {
         "termos_busca": ["Suporte", "Analista de Suporte", "Support"],
         "termos_exclusao": ["Estágio", "Intern"],
-        "locais_permitidos": ["Remoto", "Brasil", "BR", "Santa Catarina", "Imbituba", "Tubarão", "Curitiba", "Florianópolis", "São José", "Palhoça"]
+        "locais_permitidos": ["remoto", "brasil", "br", "santa catarina", "imbituba", "tubarao", "tubarão", "curitiba", "florianopolis", "florianópolis", "sao jose", "são josé", "palhoca", "palhoça"]
     }
 
 def carregar_historico():
@@ -77,8 +77,6 @@ def validar_fit_vaga(titulo, local, descricao, config):
 
     # 3. Verificar localização / modalidade
     locais = [l.lower() for l in config.get("locais_permitidos", [])]
-    
-    # Checagem de flexibilidade geográfica e trabalho remoto
     passou_local = any(loc in local_lower or loc in desc_lower for loc in locais)
     
     if not passou_local:
@@ -109,31 +107,27 @@ def buscar_gupy(termos, config):
     vagas = []
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
     for termo in termos:
         try:
-            url = f"https://portal-api.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&offset=0&limit=20"
+            url = f"https://portal.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
             res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
-                try:
-                    data = res.json()
-                    for item in data.get("data", []):
-                        id_vaga = f"gupy_{item.get('id')}"
-                        titulo = item.get("name", "")
-                        local = "Remoto" if item.get("isRemoteWork") else f"{item.get('city', '')} - {item.get('state', '')}"
-                        link = item.get("jobUrl", "")
-                        vagas.append({
-                            "id": id_vaga,
-                            "titulo": titulo,
-                            "plataforma": "Gupy",
-                            "local": local,
-                            "link": link,
-                            "descricao": f"{titulo} {local}"
-                        })
-                except Exception:
-                    print(f"⚠️ Gupy bloqueou resposta JSON para '{termo}'", flush=True)
+                data = res.json()
+                for item in data.get("data", []):
+                    id_vaga = f"gupy_{item.get('id')}"
+                    titulo = item.get("name", "")
+                    local = "Remoto" if item.get("isRemoteWork") else f"{item.get('city', '')} - {item.get('state', '')}"
+                    link = item.get("jobUrl", "")
+                    vagas.append({
+                        "id": id_vaga,
+                        "titulo": titulo,
+                        "plataforma": "Gupy",
+                        "local": local,
+                        "link": link,
+                        "descricao": f"{titulo} {local}"
+                    })
             else:
                 print(f"⚠️ Gupy respondeu com status {res.status_code} para '{termo}'", flush=True)
         except Exception as e:
