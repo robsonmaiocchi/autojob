@@ -14,7 +14,7 @@ def carregar_configuracao():
     return {
         "termos_busca": ["Suporte", "Analista de Suporte", "Support"],
         "termos_exclusao": ["Estágio", "Intern"],
-        "locais_permitidos": ["Remoto", "Brasil", "BR", "Santa Catarina", "Imbituba", "Tubarão", "Curitiba"]
+        "locais_permitidos": ["Remoto", "Brasil", "BR", "Santa Catarina", "Imbituba", "Tubarão", "Curitiba", "Florianópolis", "São José", "Palhoça"]
     }
 
 def carregar_historico():
@@ -77,6 +77,8 @@ def validar_fit_vaga(titulo, local, descricao, config):
 
     # 3. Verificar localização / modalidade
     locais = [l.lower() for l in config.get("locais_permitidos", [])]
+    
+    # Checagem de flexibilidade geográfica e trabalho remoto
     passou_local = any(loc in local_lower or loc in desc_lower for loc in locais)
     
     if not passou_local:
@@ -108,11 +110,11 @@ def buscar_gupy(termos, config):
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json"
+        "Accept": "application/json, text/plain, */*"
     }
     for termo in termos:
         try:
-            url = f"https://portal.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&offset=0&limit=20"
+            url = f"https://portal-api.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&offset=0&limit=20"
             res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 try:
