@@ -2,7 +2,9 @@ import os
 import json
 import requests
 import unicodedata
+import re
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 # Configurações do Telegram
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -15,10 +17,16 @@ def normalizar_texto(texto):
     texto_nfkd = unicodedata.normalize("NFKD", texto)
     return "".join([c for c in texto_nfkd if not unicodedata.combining(c)]).lower().strip()
 
+def gerar_hash_deduplicacao(titulo, local):
+    """Gera uma chave única simplificada para detectar vagas idênticas em plataformas diferentes."""
+    t_norm = re.sub(r'[^a-z0-9]', '', normalizar_texto(titulo))
+    l_norm = re.sub(r'[^a-z0-9]', '', normalizar_texto(local))
+    return f"{t_norm}_{l_norm}"
+
 def carregar_configuracao():
     config_default = {
         "termos_busca": ["suporte", "analista de suporte", "support", "helpdesk"],
-        "termos_exclusao": ["estagio", "estágio", "intern"],
+        "termos_exclusao": ["estagio", "estágio", "intern", "senior", "sênior", "director", "diretor", "manager", "gerente"],
         "locais_permitidos": [
             "remoto", "brasil", "br", 
             "santa catarina", "sc", "imbituba", "tubarao", "tubarão", 
@@ -40,16 +48,18 @@ def carregar_historico():
             try:
                 data = json.load(f)
                 if isinstance(data, list):
-                    return {v.get("id") for v in data if "id" in v}, data
+                    hashes = {v.get("hash", v.get("id")) for v in data if "id" in v or "hash" in v}
+                    return hashes, data
                 elif isinstance(data, dict):
-                    return set(data.get("ids", [])), data.get("detalhes", [])
+                    hashes = set(data.get("hashes", data.get("ids", [])))
+                    return hashes, data.get("detalhes", [])
             except Exception:
                 pass
     return set(), []
 
-def salvar_historico(ids, detalhes):
+def salvar_historico(hashes, detalhes):
     with open("history.json", "w", encoding="utf-8") as f:
-        json.dump({"ids": list(ids), "detalhes": detalhes[:100]}, f, ensure_ascii=False, indent=2)
+        json.dump({"hashes": list(hashes), "detalhes": detalhes[:150]}, f, ensure_ascii=False, indent=2)
 
 def enviar_telegram(mensagem, link_vaga=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -71,13 +81,13 @@ def enviar_telegram(mensagem, link_vaga=None):
         })
 
     try:
-        res = requests.post(url, data=payload, timeout=5)
+        res = requests.post(url, data=payload, timeout=8)
         if res.status_code != 200:
             print(f"⚠️ Erro ao enviar Telegram: {res.text}")
     except Exception as e:
         print(f"⚠️ Exceção ao enviar mensagem Telegram: {e}")
 
-def validar_fit_vaga(titulo, local, descricao, config):
+def calcular_score_fit(titulo, local, descricao, config):
     titulo_norm = normalizar_texto(titulo)
     desc_norm = normalizar_texto(descricao)
     local_norm = normalizar_texto(local)
@@ -85,29 +95,29 @@ def validar_fit_vaga(titulo, local, descricao, config):
     # 1. Verificar termos de exclusão
     for ex in config.get("termos_exclusao", []):
         if normalizar_texto(ex) in titulo_norm:
-            return False, f"Contém termo de exclusão '{ex}'"
+            return 0, f"Contém termo de exclusão '{ex}'"
 
-    # 2. Verificar termos de busca
+    # 2. Verificar termos de busca no título
     termos_busca = [normalizar_texto(t) for t in config.get("termos_busca", [])]
     passou_termo = any(t in titulo_norm for t in termos_busca)
     if not passou_termo:
-        return False, "Título não bate com os termos de busca"
+        return 0, "Título não bate com os termos de busca"
 
     # 3. Verificar localização / modalidade
-    locais_permitidos = [
-        normalizar_texto(l) for l in config.get("locais_permitidos", [
-            "remoto", "brasil", "br", "santa catarina", "sc", 
-            "imbituba", "tubarao", "curitiba", "florianopolis", "sao jose", "palhoca"
-        ])
-    ]
-    
+    locais_permitidos = [normalizar_texto(l) for l in config.get("locais_permitidos", [])]
     texto_checar = f"{local_norm} {desc_norm}"
     passou_local = any(loc in texto_checar for loc in locais_permitidos)
-    
     if not passou_local:
-        return False, f"Localização fora do perfil ({local})"
+        return 0, f"Localização fora do perfil ({local})"
 
-    return True, "Aprovada"
+    # Pontuação dinâmica de Match
+    score = 70  # Base para vagas aprovadas
+    if "remoto" in texto_checar or "home office" in texto_checar:
+        score += 15
+    if any(k in desc_norm or k in titulo_norm for k in ["saas", "sql", "linux", "zendesk", "jira", "aws"]):
+        score += 15
+
+    return min(score, 100), "Aprovada"
 
 def analisar_modalidade(texto):
     texto_norm = normalizar_texto(texto)
@@ -117,77 +127,76 @@ def analisar_modalidade(texto):
         return "Híbrido 🔄"
     elif "presencial" in texto_norm or "on-site" in texto_norm:
         return "Presencial 🏢"
-    return "Não especificada 📍"
+    return "Remoto / Não especificada 📍"
 
 def extrair_stack_tecnologia(texto):
-    tecnologias = ["python", "sql", "kotlin", "salesforce", "aws", "linux", "zendesk", "jira", "docker", "git"]
+    tecnologias = ["python", "sql", "kotlin", "salesforce", "aws", "linux", "zendesk", "jira", "docker", "git", "saas"]
     encontradas = []
     texto_norm = normalizar_texto(texto)
     for tech in tecnologias:
         if tech in texto_norm:
-            encontradas.append(tech.capitalize())
+            encontradas.append(tech.upper() if len(tech) <= 4 else tech.capitalize())
     return ", ".join(encontradas) if encontradas else "Geral / Suporte Técnico"
 
-from playwright.sync_api import sync_playwright
+# --- SCRAPERS / APIS ---
 
 def buscar_gupy(termos, config):
     vagas = []
     print("🔎 Consultando Gupy (via Playwright)...", flush=True)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        # Contexto simulando um navegador real no Linux
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 820}
-        )
-        page = context.new_page()
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 820}
+            )
+            page = context.new_page()
 
-        for termo in termos:
-            try:
-                url = f"https://portal.gupy.io/job-search?jobName={requests.utils.quote(termo)}"
-                page.goto(url, wait_until="networkidle", timeout=25000)
+            for termo in termos:
+                try:
+                    url = f"https://portal.gupy.io/job-search?jobName={requests.utils.quote(termo)}"
+                    page.goto(url, wait_until="networkidle", timeout=25000)
 
-                # Extrai dados dos elementos da página
-                cards = page.locator('a[href*="/job/"]').all()
-                for card in cards:
-                    try:
-                        link = card.get_attribute("href")
-                        if not link:
+                    cards = page.locator('a[href*="/job/"]').all()
+                    for card in cards:
+                        try:
+                            link = card.get_attribute("href")
+                            if not link:
+                                continue
+                            if not link.startswith("http"):
+                                link = f"https://portal.gupy.io{link}"
+
+                            titulo = card.inner_text().split("\n")[0] if card.inner_text() else termo
+                            id_vaga = f"gupy_{link.split('/')[-1].split('?')[0]}"
+
+                            vagas.append({
+                                "id": id_vaga,
+                                "titulo": titulo.strip(),
+                                "plataforma": "Gupy",
+                                "local": "Brasil / Remoto",
+                                "link": link,
+                                "descricao": f"{titulo} Gupy Remoto"
+                            })
+                        except Exception:
                             continue
-                        
-                        if not link.startswith("http"):
-                            link = f"https://portal.gupy.io{link}"
+                except Exception as e:
+                    print(f"⚠️ Erro Gupy no termo '{termo}': {e}", flush=True)
 
-                        titulo = card.inner_text().split("\n")[0] if card.inner_text() else termo
-                        id_vaga = f"gupy_{link.split('/')[-1].split('?')[0]}"
-
-                        vagas.append({
-                            "id": id_vaga,
-                            "titulo": titulo.strip(),
-                            "plataforma": "Gupy",
-                            "local": "Consultar na vaga",
-                            "link": link,
-                            "descricao": f"{titulo} Gupy"
-                        })
-                    except Exception as e_card:
-                        continue
-
-            except Exception as e:
-                print(f"⚠️ Erro ao buscar Gupy via Playwright ({termo}): {e}", flush=True)
-
-        browser.close()
+            browser.close()
+    except Exception as e_pw:
+        print(f"⚠️ Falha geral no Playwright (Gupy): {e_pw}", flush=True)
 
     return vagas
 
 def buscar_solides(termos, config):
     vagas = []
     print("🔎 Consultando Sólides...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for termo in termos:
         try:
             url = f"https://api.solides.jobs/v2/vacancies/search?title={requests.utils.quote(termo)}&take=20"
-            res = requests.get(url, headers=headers, timeout=5)
+            res = requests.get(url, headers=headers, timeout=8)
             if res.status_code == 200 and res.text.strip().startswith("{"):
                 data = res.json()
                 for item in data.get("data", []):
@@ -206,17 +215,17 @@ def buscar_solides(termos, config):
                         "descricao": f"{titulo} {local}"
                     })
         except Exception as e:
-            print(f"⚠️ Erro ao consultar Sólides ({termo}): {e}", flush=True)
+            print(f"⚠️ Erro Sólides ({termo}): {e}", flush=True)
     return vagas
 
 def buscar_linkedin(termos, config):
     vagas = []
     print("🔎 Scrapeando LinkedIn...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for termo in termos:
         try:
             url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={requests.utils.quote(termo)}&location=Brasil&geoId=106057199&start=0"
-            res = requests.get(url, headers=headers, timeout=5)
+            res = requests.get(url, headers=headers, timeout=8)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, "html.parser")
                 cards = soup.find_all("li")
@@ -239,71 +248,99 @@ def buscar_linkedin(termos, config):
                             "descricao": f"{titulo} {local}"
                         })
         except Exception as e:
-            print(f"⚠️ Erro ao consultar LinkedIn ({termo}): {e}", flush=True)
+            print(f"⚠️ Erro LinkedIn ({termo}): {e}", flush=True)
     return vagas
 
-def buscar_indeed(termos, config):
+def buscar_remotar(termos, config):
+    """Nova fonte: Remotar (Vagas 100% remotas no BR)"""
     vagas = []
-    print("🔎 Scrapeando Indeed...", flush=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+    print("🔎 Consultando Remotar...", flush=True)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for termo in termos:
         try:
-            url = f"https://br.indeed.com/jobs?q={requests.utils.quote(termo)}&l=Brasil"
-            res = requests.get(url, headers=headers, timeout=5)
+            url = f"https://remotar.com.br/search?q={requests.utils.quote(termo)}"
+            res = requests.get(url, headers=headers, timeout=8)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, "html.parser")
-                cards = soup.find_all("div", class_="job_seen_beacon")
-                for card in cards:
-                    title_elem = card.find("h2", class_="jobTitle")
-                    loc_elem = card.find("div", class_="company_location")
-                    link_elem = card.find("a", href=True)
-                    
-                    if title_elem and link_elem:
-                        job_id = link_elem.get("data-jk", link_elem["href"][-10:])
-                        vaga_id = f"indeed_{job_id}"
-                        titulo = title_elem.text.strip()
-                        local = loc_elem.text.strip() if loc_elem else "Brasil"
-                        link = f"https://br.indeed.com/viewjob?jk={job_id}" if "jk=" not in link_elem["href"] else f"https://br.indeed.com{link_elem['href']}"
+                cards = soup.find_all("a", href=re.compile(r'/job/'))
+                for card in cards[:10]:
+                    link = card["href"]
+                    if not link.startswith("http"):
+                        link = f"https://remotar.com.br{link}"
+                    titulo = card.text.strip()
+                    if titulo:
+                        vaga_id = f"remotar_{link.split('/')[-1]}"
                         vagas.append({
                             "id": vaga_id,
                             "titulo": titulo,
-                            "plataforma": "Indeed",
-                            "local": local,
+                            "plataforma": "Remotar",
+                            "local": "Remoto",
                             "link": link,
-                            "descricao": f"{titulo} {local}"
+                            "descricao": f"{titulo} Remoto SaaS"
                         })
         except Exception as e:
-            print(f"⚠️ Erro ao consultar Indeed ({termo}): {e}", flush=True)
+            print(f"⚠️ Erro Remotar ({termo}): {e}", flush=True)
+    return vagas
+
+def buscar_coodesh(termos, config):
+    """Nova fonte: Coodesh (Vagas de TI e Suporte Técnico)"""
+    vagas = []
+    print("🔎 Consultando Coodesh...", flush=True)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    for termo in termos:
+        try:
+            url = f"https://coodesh.com/api/v1/jobs/public?search={requests.utils.quote(termo)}&limit=15"
+            res = requests.get(url, headers=headers, timeout=8)
+            if res.status_code == 200 and res.text.strip().startswith("{"):
+                data = res.json()
+                for item in data.get("jobs", []):
+                    vaga_id = f"coodesh_{item.get('id')}"
+                    titulo = item.get("title", "")
+                    link = f"https://coodesh.com/vagas/{item.get('slug', '')}"
+                    vagas.append({
+                        "id": vaga_id,
+                        "titulo": titulo,
+                        "plataforma": "Coodesh",
+                        "local": "Remoto / Brasil",
+                        "link": link,
+                        "descricao": f"{titulo} Tech Support"
+                    })
+        except Exception as e:
+            print(f"⚠️ Erro Coodesh ({termo}): {e}", flush=True)
     return vagas
 
 def main():
     config = carregar_configuracao()
-    historico_ids, historico_detalhado = carregar_historico()
+    historico_hashes, historico_detalhado = carregar_historico()
     
-    termos = config.get("termos_busca", ["Suporte"])
+    termos = config.get("termos_busca", ["suporte"])
     
     todas_vagas = []
     todas_vagas.extend(buscar_gupy(termos, config))
     todas_vagas.extend(buscar_solides(termos, config))
     todas_vagas.extend(buscar_linkedin(termos, config))
-    todas_vagas.extend(buscar_indeed(termos, config))
+    todas_vagas.extend(buscar_remotar(termos, config))
+    todas_vagas.extend(buscar_coodesh(termos, config))
 
-    print(f"Total de vagas capturadas nas APIs/Scrapers: {len(todas_vagas)}", flush=True)
+    print(f"\n📊 Total de vagas capturadas de todas as fontes: {len(todas_vagas)}", flush=True)
 
     novas_vagas = 0
 
     for vaga in todas_vagas:
-        if vaga["id"] in historico_ids:
+        hash_vaga = gerar_hash_deduplicacao(vaga["titulo"], vaga["local"])
+        
+        # Validação de deduplicação cross-platform
+        if hash_vaga in historico_hashes or vaga["id"] in historico_hashes:
             continue
 
-        passou_filtro, razao = validar_fit_vaga(vaga["titulo"], vaga["local"], vaga["descricao"], config)
+        score, razao = calcular_score_fit(vaga["titulo"], vaga["local"], vaga["descricao"], config)
         
-        if passou_filtro:
+        if score > 0:
             modalidade = analisar_modalidade(vaga["local"] + " " + vaga["descricao"])
             stack = extrair_stack_tecnologia(vaga["descricao"])
             
             msg = (
-                f"🎯 *NOVA VAGA ENCONTRADA*\n\n"
+                f"🎯 *NOVA VAGA ENCONTRADA* (Fit: {score}%)\n\n"
                 f"📌 *Cargo:* {vaga['titulo']}\n"
                 f"🏢 *Plataforma:* {vaga['plataforma']}\n"
                 f"📍 *Modalidade:* {modalidade}\n"
@@ -312,20 +349,23 @@ def main():
             
             enviar_telegram(msg, link_vaga=vaga["link"])
             
-            historico_ids.add(vaga["id"])
+            historico_hashes.add(hash_vaga)
+            historico_hashes.add(vaga["id"])
             historico_detalhado.insert(0, {
                 "id": vaga["id"],
+                "hash": hash_vaga,
                 "titulo": vaga["titulo"],
                 "plataforma": vaga["plataforma"],
                 "local": vaga["local"],
+                "score": score,
                 "link": vaga["link"]
             })
             novas_vagas += 1
         else:
-            print(f"❌ Rejeitada [{vaga['plataforma']}]: {vaga['titulo']} ({vaga['local']}) -> Motivo: {razao}", flush=True)
-            historico_ids.add(vaga["id"])
+            print(f"❌ Rejeitada [{vaga['plataforma']}]: {vaga['titulo']} -> {razao}", flush=True)
+            historico_hashes.add(hash_vaga)
 
-    salvar_historico(historico_ids, historico_detalhado)
+    salvar_historico(historico_hashes, historico_detalhado)
     print(f"✅ Processamento finalizado! {novas_vagas} novas vagas enviadas ao Telegram.", flush=True)
 
 if __name__ == "__main__":
