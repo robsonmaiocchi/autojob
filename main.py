@@ -1,21 +1,39 @@
 import os
 import json
 import requests
+import unicodedata
 from bs4 import BeautifulSoup
 
 # Configurações do Telegram
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
+def normalizar_texto(texto):
+    """Remove acentos, caracteres especiais e converte para minúsculas."""
+    if not texto:
+        return ""
+    texto_nfkd = unicodedata.normalize("NFKD", texto)
+    return "".join([c for c in texto_nfkd if not unicodedata.combining(c)]).lower().strip()
+
 def carregar_configuracao():
-    if os.path.exists("config.json"):
-        with open("config.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {
-        "termos_busca": ["Suporte", "Analista de Suporte", "Support"],
-        "termos_exclusao": ["Estágio", "Intern"],
-        "locais_permitidos": ["remoto", "brasil", "br", "santa catarina", "imbituba", "tubarao", "tubarão", "curitiba", "florianopolis", "florianópolis", "sao jose", "são josé", "palhoca", "palhoça"]
+    config_default = {
+        "termos_busca": ["suporte", "analista de suporte", "support", "helpdesk"],
+        "termos_exclusao": ["estagio", "estágio", "intern"],
+        "locais_permitidos": [
+            "remoto", "brasil", "br", 
+            "santa catarina", "sc", "imbituba", "tubarao", "tubarão", 
+            "curitiba", "florianopolis", "florianópolis", 
+            "sao jose", "são josé", "palhoca", "palhoça"
+        ]
     }
+    if os.path.exists("config.json"):
+        try:
+            with open("config.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data
+        except Exception as e:
+            print(f"⚠️ Erro ao ler config.json: {e}")
+    return config_default
 
 def carregar_historico():
     if os.path.exists("history.json"):
@@ -61,45 +79,54 @@ def enviar_telegram(mensagem, link_vaga=None):
         print(f"⚠️ Exceção ao enviar mensagem Telegram: {e}")
 
 def validar_fit_vaga(titulo, local, descricao, config):
-    titulo_lower = titulo.lower()
-    desc_lower = descricao.lower()
-    local_lower = local.lower()
+    titulo_norm = normalizar_texto(titulo)
+    desc_norm = normalizar_texto(descricao)
+    local_norm = normalizar_texto(local)
 
     # 1. Verificar termos de exclusão
     for ex in config.get("termos_exclusao", []):
-        if ex.lower() in titulo_lower:
+        if normalizar_texto(ex) in titulo_norm:
             return False, f"Contém termo de exclusão '{ex}'"
 
     # 2. Verificar termos de busca
-    passou_termo = any(t.lower() in titulo_lower for t in config.get("termos_busca", []))
+    termos_busca = [normalizar_texto(t) for t in config.get("termos_busca", [])]
+    passou_termo = any(t in titulo_norm for t in termos_busca)
     if not passou_termo:
         return False, "Título não bate com os termos de busca"
 
     # 3. Verificar localização / modalidade
-    locais = [l.lower() for l in config.get("locais_permitidos", [])]
-    passou_local = any(loc in local_lower or loc in desc_lower for loc in locais)
+    locais_permitidos = [
+        normalizar_texto(l) for l in config.get("locais_permitidos", [
+            "remoto", "brasil", "br", "santa catarina", "sc", 
+            "imbituba", "tubarao", "curitiba", "florianopolis", "sao jose", "palhoca"
+        ])
+    ]
+    
+    # Adicionar flexibilidade extra para SC e Brasil no texto do local/descrição
+    texto_checar = f"{local_norm} {desc_norm}"
+    passou_local = any(loc in texto_checar for loc in locais_permitidos)
     
     if not passou_local:
-        return False, "Localização fora do perfil"
+        return False, f"Localização fora do perfil ({local})"
 
     return True, "Aprovada"
 
 def analisar_modalidade(texto):
-    texto_lower = texto.lower()
-    if "remoto" in texto_lower or "remote" in texto_lower or "home office" in texto_lower:
+    texto_norm = normalizar_texto(texto)
+    if "remoto" in texto_norm or "remote" in texto_norm or "home office" in texto_norm:
         return "Remoto 🏠"
-    elif "híbrido" in texto_lower or "hybrid" in texto_lower:
+    elif "hibrido" in texto_norm or "hybrid" in texto_norm:
         return "Híbrido 🔄"
-    elif "presencial" in texto_lower or "on-site" in texto_lower:
+    elif "presencial" in texto_norm or "on-site" in texto_norm:
         return "Presencial 🏢"
     return "Não especificada 📍"
 
 def extrair_stack_tecnologia(texto):
     tecnologias = ["python", "sql", "kotlin", "salesforce", "aws", "linux", "zendesk", "jira", "docker", "git"]
     encontradas = []
-    texto_lower = texto.lower()
+    texto_norm = normalizar_texto(texto)
     for tech in tecnologias:
-        if tech in texto_lower:
+        if tech in texto_norm:
             encontradas.append(tech.capitalize())
     return ", ".join(encontradas) if encontradas else "Geral / Suporte Técnico"
 
@@ -107,29 +134,34 @@ def buscar_gupy(termos, config):
     vagas = []
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
     }
     for termo in termos:
         try:
             url = f"https://portal.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
             res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200:
+            if res.status_code == 200 and res.text.strip().startswith("{"):
                 data = res.json()
                 for item in data.get("data", []):
                     id_vaga = f"gupy_{item.get('id')}"
                     titulo = item.get("name", "")
-                    local = "Remoto" if item.get("isRemoteWork") else f"{item.get('city', '')} - {item.get('state', '')}"
+                    is_remote = item.get("isRemoteWork", False)
+                    city = item.get("city", "")
+                    state = item.get("state", "")
+                    local = "Remoto" if is_remote else f"{city} - {state}".strip(" -")
                     link = item.get("jobUrl", "")
                     vagas.append({
                         "id": id_vaga,
                         "titulo": titulo,
                         "plataforma": "Gupy",
-                        "local": local,
+                        "local": local if local else "Brasil",
                         "link": link,
                         "descricao": f"{titulo} {local}"
                     })
             else:
-                print(f"⚠️ Gupy respondeu com status {res.status_code} para '{termo}'", flush=True)
+                print(f"⚠️ Gupy bloqueou ou respondeu sem JSON público para '{termo}' (Status {res.status_code})", flush=True)
         except Exception as e:
             print(f"⚠️ Erro ao consultar Gupy ({termo}): {e}", flush=True)
     return vagas
@@ -142,7 +174,7 @@ def buscar_solides(termos, config):
         try:
             url = f"https://api.solides.jobs/v2/vacancies/search?title={requests.utils.quote(termo)}&take=20"
             res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200:
+            if res.status_code == 200 and res.text.strip().startswith("{"):
                 data = res.json()
                 for item in data.get("data", []):
                     id_vaga = f"solides_{item.get('id')}"
