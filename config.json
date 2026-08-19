@@ -15,7 +15,10 @@
     "Intern",
     "Sênior",
     "Senior",
-    "Lead"
+    "Lead",
+    "Coordenador",
+    "Gerente",
+    "Manager"
   ],
   "plataformas": {
     "gupy": true,

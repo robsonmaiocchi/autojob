@@ -1,7 +1,9 @@
 import os
 import json
 import time
+import re
 import requests
+import unicodedata
 from urllib.parse import quote
 from playwright.sync_api import sync_playwright
 
@@ -10,11 +12,17 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 HISTORICO_FILE = "vagas_enviadas.json"
 CONFIG_FILE = "config.json"
 
+def remover_acentos(texto):
+    if not texto:
+        return ""
+    texto_norm = unicodedata.normalize('NFD', texto)
+    return "".join(c for c in texto_norm if unicodedata.category(c) != 'Mn').lower().strip()
+
 def carregar_configuracao():
     default_config = {
-        "termos_busca": ["Analista de Suporte Tecnico", "Suporte SaaS", "Suporte Tecnico"],
+        "termos_busca": ["Analista de Suporte Tecnico", "Suporte SaaS"],
         "locais": ["Remoto", "Imbituba", "Tubarão"],
-        "termos_excluir": ["Estágio", "Intern", "Sênior", "Senior", "Lead"],
+        "termos_excluir": ["Estágio", "Intern", "Sênior", "Senior", "Lead", "Coordenador", "Gerente"],
         "plataformas": {"gupy": True, "solides": True, "linkedin": True, "indeed": True}
     }
     if os.path.exists(CONFIG_FILE):
@@ -22,13 +30,13 @@ def carregar_configuracao():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Erro ao ler {CONFIG_FILE}, utilizando configurações padrão: {e}")
+            print(f"Erro ao ler {CONFIG_FILE}, usando padrão: {e}")
     return default_config
 
 config = carregar_configuracao()
 TERMOS_BUSCA = config.get("termos_busca", [])
-FILTROS_LOCAL = config.get("locais", [])
-TERMOS_EXCLUIR = config.get("termos_excluir", [])
+FILTROS_LOCAL = [remover_acentos(l) for l in config.get("locais", [])]
+TERMOS_EXCLUIR = [remover_acentos(t) for t in config.get("termos_excluir", [])]
 PLATAFORMAS = config.get("plataformas", {})
 
 def carregar_historico():
@@ -45,11 +53,17 @@ def salvar_historico(historico):
         json.dump(list(historico), f, indent=2, ensure_ascii=False)
 
 def vaga_deve_ser_excluida(titulo):
-    titulo_lower = titulo.lower()
+    titulo_norm = remover_acentos(titulo)
     for termo in TERMOS_EXCLUIR:
-        if termo.lower() in titulo_lower:
+        if termo in titulo_norm:
             return True
     return False
+
+def local_corresponde(local):
+    local_norm = remover_acentos(local)
+    if "remoto" in local_norm:
+        return True
+    return any(loc in local_norm for loc in FILTROS_LOCAL)
 
 def enviar_telegram(vaga):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -97,7 +111,7 @@ def buscar_gupy(termo, historico):
                 state = item.get("state", "")
                 local_str = "Remoto" if is_remote else f"{city} - {state}".strip(" -")
 
-                if is_remote or any(loc.lower() in local_str.lower() for loc in FILTROS_LOCAL):
+                if local_corresponde(local_str):
                     novas_vagas.append({
                         "id": vaga_id,
                         "titulo": titulo,
@@ -131,7 +145,7 @@ def buscar_solides(termo, historico):
                 state = item.get("state", "")
                 local_str = workplace_type if workplace_type else f"{city} - {state}".strip(" -")
 
-                if "remote" in workplace_type.lower() or any(loc.lower() in local_str.lower() for loc in FILTROS_LOCAL):
+                if local_corresponde(local_str):
                     novas_vagas.append({
                         "id": vaga_id,
                         "titulo": titulo,
@@ -148,7 +162,7 @@ def buscar_solides(termo, historico):
 def buscar_linkedin(page, termo, historico):
     novas_vagas = []
     url = f"https://www.linkedin.com/jobs/search?keywords={quote(termo)}&location=Brasil&f_TPR=r86400"
-    print(f"  [LinkedIn] Buscando termo: {termo}")
+    print(f"  [LinkedIn] Buscando: {termo}")
     
     try:
         page.goto(url, timeout=30000)
@@ -176,7 +190,7 @@ def buscar_linkedin(page, termo, historico):
                 empresa = empresa_elem.inner_text().strip() if empresa_elem else "Empresa não informada"
                 local = local_elem.inner_text().strip() if local_elem else "Brasil"
 
-                if "remoto" in local.lower() or any(loc.lower() in local.lower() for loc in FILTROS_LOCAL):
+                if local_corresponde(local):
                     novas_vagas.append({
                         "id": vaga_id,
                         "titulo": titulo,
@@ -188,7 +202,7 @@ def buscar_linkedin(page, termo, historico):
             except Exception:
                 continue
     except Exception as e:
-        print(f"  [LinkedIn] Aviso/Erro na raspagem ({termo}): {e}")
+        print(f"  [LinkedIn] Aviso/Erro ({termo}): {e}")
 
     return novas_vagas
 
@@ -196,7 +210,7 @@ def buscar_linkedin(page, termo, historico):
 def buscar_indeed(page, termo, historico):
     novas_vagas = []
     url = f"https://br.indeed.com/jobs?q={quote(termo)}&l=Brasil&fromage=1"
-    print(f"  [Indeed] Buscando termo: {termo}")
+    print(f"  [Indeed] Buscando: {termo}")
 
     try:
         page.goto(url, timeout=30000)
@@ -226,7 +240,7 @@ def buscar_indeed(page, termo, historico):
                 local = location_elem.inner_text().strip() if location_elem else "Brasil"
                 link = f"https://br.indeed.com/viewjob?jk={job_key}"
 
-                if "remoto" in local.lower() or any(loc.lower() in local.lower() for loc in FILTROS_LOCAL):
+                if local_corresponde(local):
                     novas_vagas.append({
                         "id": vaga_id,
                         "titulo": titulo,
@@ -238,7 +252,7 @@ def buscar_indeed(page, termo, historico):
             except Exception:
                 continue
     except Exception as e:
-        print(f"  [Indeed] Aviso/Erro na raspagem ({termo}): {e}")
+        print(f"  [Indeed] Aviso/Erro ({termo}): {e}")
 
     return novas_vagas
 
@@ -246,16 +260,16 @@ def main():
     historico = carregar_historico()
     vagas_para_enviar = []
 
-    print("🔎 Iniciando varredura com as configurações do config.json...")
+    print("🔎 Iniciando varredura com inteligência de filtro UTF-8...")
 
-    # 1. APIs (Gupy e Solides)
+    # 1. APIs
     for termo in TERMOS_BUSCA:
         if PLATAFORMAS.get("gupy", True):
             vagas_para_enviar.extend(buscar_gupy(termo, historico))
         if PLATAFORMAS.get("solides", True):
             vagas_para_enviar.extend(buscar_solides(termo, historico))
 
-    # 2. Playwright (LinkedIn e Indeed)
+    # 2. Playwright
     usar_linkedin = PLATAFORMAS.get("linkedin", True)
     usar_indeed = PLATAFORMAS.get("indeed", True)
 
