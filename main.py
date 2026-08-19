@@ -110,10 +110,16 @@ def buscar_gupy(termos, config):
     vagas = []
     print("🔎 Consultando Gupy...", flush=True)
     try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json"
+        }
         for termo in termos:
             url = f"https://portal.gupy.io/api/v1/jobs?name={requests.utils.quote(termo)}&limit=20"
-            res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-            if res.status_code == 200:
+            res = requests.get(url, headers=headers, timeout=10)
+            
+            # Verifica se retornou 200 OK e se o conteúdo é JSON
+            if res.status_code == 200 and "json" in res.headers.get("Content-Type", "").lower():
                 data = res.json()
                 for item in data.get("data", []):
                     id_vaga = f"gupy_{item.get('id')}"
@@ -128,6 +134,8 @@ def buscar_gupy(termos, config):
                         "link": link,
                         "descricao": f"{titulo} {local}"
                     })
+            else:
+                print(f"⚠️ Gupy respondeu com status {res.status_code} (não-JSON)", flush=True)
     except Exception as e:
         print(f"⚠️ Erro ao consultar Gupy: {e}", flush=True)
     return vagas
@@ -287,6 +295,7 @@ def main():
             })
             novas_vagas += 1
         else:
+            print(f"❌ Rejeitada [{vaga['plataforma']}]: {vaga['titulo']} ({vaga['local']}) -> Motivo: {razao}", flush=True)
             historico_ids.add(vaga["id"])
 
     # Salva histórico estruturado para alimentar o Painel Web
