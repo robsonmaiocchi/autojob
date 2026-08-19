@@ -128,39 +128,56 @@ def extrair_stack_tecnologia(texto):
             encontradas.append(tech.capitalize())
     return ", ".join(encontradas) if encontradas else "Geral / Suporte Técnico"
 
+from playwright.sync_api import sync_playwright
+
 def buscar_gupy(termos, config):
     vagas = []
-    print("🔎 Consultando Gupy...", flush=True)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*"
-    }
-    for termo in termos:
-        try:
-            url = f"https://portal-api.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
-            res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200 and res.text.strip().startswith("{"):
-                data = res.json()
-                for item in data.get("data", []):
-                    id_vaga = f"gupy_{item.get('id')}"
-                    titulo = item.get("name", "")
-                    is_remote = item.get("isRemoteWork", False)
-                    city = item.get("city", "")
-                    state = item.get("state", "")
-                    local = "Remoto" if is_remote else f"{city} - {state}".strip(" -")
-                    link = item.get("jobUrl", "")
-                    vagas.append({
-                        "id": id_vaga,
-                        "titulo": titulo,
-                        "plataforma": "Gupy",
-                        "local": local if local else "Brasil",
-                        "link": link,
-                        "descricao": f"{titulo} {local}"
-                    })
-            else:
-                print(f"⚠️ Gupy bloqueou ou respondeu sem JSON público para '{termo}' (Status {res.status_code})", flush=True)
-        except Exception as e:
-            print(f"⚠️ Erro ao consultar Gupy ({termo}): {e}", flush=True)
+    print("🔎 Consultando Gupy (via Playwright)...", flush=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        # Contexto simulando um navegador real no Linux
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 820}
+        )
+        page = context.new_page()
+
+        for termo in termos:
+            try:
+                url = f"https://portal.gupy.io/job-search?jobName={requests.utils.quote(termo)}"
+                page.goto(url, wait_until="networkidle", timeout=25000)
+
+                # Extrai dados dos elementos da página
+                cards = page.locator('a[href*="/job/"]').all()
+                for card in cards:
+                    try:
+                        link = card.get_attribute("href")
+                        if not link:
+                            continue
+                        
+                        if not link.startswith("http"):
+                            link = f"https://portal.gupy.io{link}"
+
+                        titulo = card.inner_text().split("\n")[0] if card.inner_text() else termo
+                        id_vaga = f"gupy_{link.split('/')[-1].split('?')[0]}"
+
+                        vagas.append({
+                            "id": id_vaga,
+                            "titulo": titulo.strip(),
+                            "plataforma": "Gupy",
+                            "local": "Consultar na vaga",
+                            "link": link,
+                            "descricao": f"{titulo} Gupy"
+                        })
+                    except Exception as e_card:
+                        continue
+
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar Gupy via Playwright ({termo}): {e}", flush=True)
+
+        browser.close()
+
     return vagas
 
 def buscar_solides(termos, config):
