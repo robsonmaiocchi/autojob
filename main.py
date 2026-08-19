@@ -13,47 +13,43 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 # ==============================================================================
 # CONFIGURAÇÕES E AMBIENTE
 # ==============================================================================
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 CONFIG_FILE = "config.json"
 HISTORY_FILE = "history.json"
 
-# Instância para geração de User-Agents aleatórios
 ua = UserAgent(fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 def get_headers():
-    """Gera cabeçalhos HTTP dinâmicos para evitar bloqueios e simular navegação real."""
+    """Gera cabeçalhos HTTP dinâmicos para simular navegação real."""
     return {
         "User-Agent": ua.random,
         "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept": "application/json, text/plain, */*",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache"
     }
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((requests.exceptions.RequestException, Exception)),
-    reraise=False
-)
 def fetch_url(url, method="GET", json_data=None, params=None, timeout=12):
-    """Realiza requisições HTTP com retry automático, backoff exponencial e User-Agent dinâmico."""
+    """Realiza requisições HTTP protegidas sem interromper a execução do bot em caso de erro 4xx/5xx."""
     headers = get_headers()
-    if method.upper() == "POST":
-        response = requests.post(url, json=json_data, headers=headers, params=params, timeout=timeout)
-    else:
-        response = requests.get(url, headers=headers, params=params, timeout=timeout)
-    
-    response.raise_for_status()
-    return response
+    try:
+        if method.upper() == "POST":
+            response = requests.post(url, json=json_data, headers=headers, params=params, timeout=timeout)
+        else:
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
+        
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Falha na requisição para {url}: {e}")
+        return None
 
 # ==============================================================================
 # ALGORITMO DE PONTUAÇÃO DE RELEVÂNCIA (MATCH SCORE)
 # ==============================================================================
 PALAVRAS_CHAVE_PESO = {
-    # Competências Técnicas e Termos Estratégicos (+20%)
     "saas": 20,
     "sql": 20,
     "helpdesk": 20,
@@ -63,8 +59,6 @@ PALAVRAS_CHAVE_PESO = {
     "customer success": 15,
     "suporte tecnico": 25,
     "technical support": 25,
-    
-    # Níveis de Experiência Alvo (+15%)
     "junior": 15,
     "jr": 15,
     "pleno": 15,
@@ -81,10 +75,8 @@ def calcular_match_score(titulo, empresa, local):
         if termo in texto_completo:
             score += peso
 
-    # Garantir limite de 0 a 100
     score = min(score, 100)
 
-    # Definir selo/tag visual
     if score >= 70:
         badge = "🔥 Excelente (High Match)"
     elif score >= 40:
@@ -147,9 +139,9 @@ def generate_hash(titulo, empresa, plataforma):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 def send_telegram(mensagem, link_vaga=None):
-    """Envia notificação para o Telegram com botões inline interativos (se houver link)."""
+    """Envia notificação para o Telegram com botões inline interativos."""
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID não definidos.")
+        print("⚠️ TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID não definidos.")
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -173,7 +165,7 @@ def send_telegram(mensagem, link_vaga=None):
     try:
         res = fetch_url(url, method="POST", json_data=payload)
         if not res or not res.ok:
-            print(f"❌ Erro ao enviar para o Telegram: {res.status_code if res else 'sem resposta'}")
+            print(f"❌ Erro ao enviar para o Telegram.")
     except Exception as e:
         print(f"❌ Exceção ao enviar Telegram: {e}")
 
@@ -186,16 +178,16 @@ def deve_excluir(titulo, termos_excluir):
     return False
 
 # ==============================================================================
-# SCRAPERS / CONSUMIDORES DE API PARA AS 6 PLATAFORMAS
+# SCRAPERS / CONSUMIDORES DE API PARA AS PLATAFORMAS
 # ==============================================================================
 
 def buscar_gupy(termos, locais, termos_excluir):
     vagas = []
     base_url = "https://portal.api.gupy.io/api/v1/jobs"
     for termo in termos:
-        params = {"jobName": termo, "limit": 20, "offset": 0}
+        params = {"name": termo, "limit": 20, "offset": 0}
         res = fetch_url(base_url, params=params)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         try:
             data = res.json()
@@ -223,7 +215,7 @@ def buscar_solides(termos, locais, termos_excluir):
     for termo in termos:
         payload = {"title": termo, "take": 20, "page": 1}
         res = fetch_url(base_url, method="POST", json_data=payload)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         try:
             data = res.json()
@@ -254,7 +246,7 @@ def buscar_linkedin(termos, locais, termos_excluir):
         termo_encoded = urllib.parse.quote(termo)
         url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={termo_encoded}&location=Brasil&start=0"
         res = fetch_url(url)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         soup = BeautifulSoup(res.text, "html.parser")
         cards = soup.find_all("li")
@@ -286,7 +278,7 @@ def buscar_indeed(termos, locais, termos_excluir):
         termo_encoded = urllib.parse.quote(termo)
         url = f"https://br.indeed.com/jobs?q={termo_encoded}&l=Brasil"
         res = fetch_url(url)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         soup = BeautifulSoup(res.text, "html.parser")
         cards = soup.find_all("div", class_=re.compile("job_seen_beacon|result"))
@@ -319,7 +311,7 @@ def buscar_remotar(termos, locais, termos_excluir):
         termo_encoded = urllib.parse.quote(termo)
         url = f"https://remotar.com.br/busca?q={termo_encoded}"
         res = fetch_url(url)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         soup = BeautifulSoup(res.text, "html.parser")
         cards = soup.find_all("div", class_=re.compile("job-card|card"))
@@ -350,7 +342,7 @@ def buscar_coodesh(termos, locais, termos_excluir):
     for termo in termos:
         params = {"search": termo, "limit": 20}
         res = fetch_url(url, params=params)
-        if not res or res.status_code != 200:
+        if not res:
             continue
         try:
             data = res.json()
@@ -390,7 +382,6 @@ def main():
 
     vagas_encontradas = []
 
-    # Executa cada plataforma se estiver ativa nas configurações
     if plataformas_ativas.get("gupy", True):
         print("🔎 Buscando na Gupy...")
         vagas_encontradas.extend(buscar_gupy(termos, locais, termos_excluir))
@@ -421,7 +412,6 @@ def main():
     high_match_count = 0
     medium_match_count = 0
     general_match_count = 0
-    
     plat_counts = {}
 
     hashes_existentes = set(history.get("hashes", []))
@@ -433,11 +423,9 @@ def main():
             hashes_existentes.add(h)
             novas_vagas_count += 1
 
-            # Contabilidade por plataforma
             plat = vaga["plataforma"]
             plat_counts[plat] = plat_counts.get(plat, 0) + 1
 
-            # Calcula a relevância da vaga
             score, badge = calcular_match_score(vaga["titulo"], vaga["empresa"], vaga["local"])
 
             if score >= 70:
@@ -447,7 +435,6 @@ def main():
             else:
                 general_match_count += 1
 
-            # Monta notificação do Telegram com Match Score
             msg = (
                 f"🎯 <b>Nova Vaga Encontrada!</b>\n\n"
                 f"📌 <b>Título:</b> {vaga['titulo']}\n"
@@ -458,9 +445,8 @@ def main():
             )
             
             send_telegram(msg, vaga["link"])
-            time.sleep(1) # Intervalo suave entre mensagens para evitar Rate Limit do Telegram
+            time.sleep(1)
 
-            # Adiciona aos detalhes do histórico
             detalhes_recentes.insert(0, {
                 "titulo": vaga["titulo"],
                 "empresa": vaga["empresa"],
@@ -470,13 +456,11 @@ def main():
                 "data": datetime.now().strftime("%Y-%m-%d %H:%M")
             })
 
-    # Mantém apenas os 50 detalhes mais recentes no history.json
     history["hashes"] = list(hashes_existentes)
     history["detalhes"] = detalhes_recentes[:50]
     
     save_history(history)
 
-    # Envia Resumo do Execução se houver novas vagas
     if novas_vagas_count > 0:
         resumo_plat = "\n".join([f"• {k}: {v}" for k, v in plat_counts.items()])
         msg_resumo = (
@@ -492,7 +476,7 @@ def main():
         )
         send_telegram(msg_resumo)
 
-    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas e resumo gerado.")
+    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas.")
 
 if __name__ == "__main__":
     main()
