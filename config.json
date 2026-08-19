@@ -1,0 +1,26 @@
+{
+  "termos_busca": [
+    "Analista de Suporte Tecnico",
+    "Suporte SaaS",
+    "Suporte Tecnico",
+    "Technical Support Analyst"
+  ],
+  "locais": [
+    "Remoto",
+    "Imbituba",
+    "Tubarão"
+  ],
+  "termos_excluir": [
+    "Estágio",
+    "Intern",
+    "Sênior",
+    "Senior",
+    "Lead"
+  ],
+  "plataformas": {
+    "gupy": true,
+    "solides": true,
+    "linkedin": true,
+    "indeed": true
+  }
+}

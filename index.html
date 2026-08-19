@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel AutoJob - Configurações</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 flex justify-center">
+  <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700">
+    <h1 class="text-2xl font-bold mb-6 text-indigo-400 flex items-center gap-2">
+      ⚙️ Gerenciador do AutoJob
+    </h1>
+
+    <!-- Token GitHub -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">GitHub Personal Access Token (PAT):</label>
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500">
+      <p class="text-xs text-slate-400 mt-1">Necessário com permissão de escrita no repositório.</p>
+    </div>
+
+    <!-- Termos de Busca -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Termos de Busca (separados por vírgula):</label>
+      <textarea id="termosBusca" rows="3" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500"></textarea>
+    </div>
+
+    <!-- Locais -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Locais / Modalidades (separados por vírgula):</label>
+      <input type="text" id="locais" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Exclusões -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium mb-2 text-slate-300">Palavras para Excluir do Título (ex: Sênior, Estágio):</label>
+      <input type="text" id="termosExcluir" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Botões -->
+    <div class="flex gap-4">
+      <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar Atual</button>
+      <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
+    </div>
+
+    <div id="status" class="mt-4 text-center font-medium"></div>
+  </div>
+
+  <script>
+    const REPO = "robsonmaiocchi/autojob";
+    const FILE_PATH = "config.json";
+
+    let fileSha = "";
+
+    async function carregarConfig() {
+      const status = document.getElementById("status");
+      status.innerText = "Carregando...";
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`);
+        const data = await res.json();
+        fileSha = data.sha;
+        const content = JSON.parse(atob(data.content));
+
+        document.getElementById("termosBusca").value = content.termos_busca.join(", ");
+        document.getElementById("locais").value = content.locais.join(", ");
+        document.getElementById("termosExcluir").value = (content.termos_excluir || []).join(", ");
+        status.innerText = "✅ Configuração carregada com sucesso!";
+        status.className = "mt-4 text-center font-medium text-green-400";
+      } catch (err) {
+        status.innerText = "❌ Erro ao carregar. Verifique o repositório público ou token.";
+        status.className = "mt-4 text-center font-medium text-red-400";
+      }
+    }
+
+    async function salvarConfig() {
+      const token = document.getElementById("ghToken").value;
+      const status = document.getElementById("status");
+
+      if (!token) {
+        alert("Insira seu GitHub Personal Access Token!");
+        return;
+      }
+
+      status.innerText = "Salvando...";
+
+      const newConfig = {
+        termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
+        locais: document.getElementById("locais").value.split(",").map(s => s.trim()).filter(Boolean),
+        termos_excluir: document.getElementById("termosExcluir").value.split(",").map(s => s.trim()).filter(Boolean),
+        plataformas: { gupy: true, solides: true, linkedin: true, indeed: true }
+      };
+
+      const body = {
+        message: "chore: atualiza config.json via painel web",
+        content: btoa(JSON.stringify(newConfig, null, 2)),
+        sha: fileSha
+      };
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          fileSha = resData.content.sha;
+          status.innerText = "🚀 Salvo com sucesso! A próxima execução usará os novos termos.";
+          status.className = "mt-4 text-center font-medium text-green-400";
+        } else {
+          throw new Error("Erro de permissão ou token inválido");
+        }
+      } catch (err) {
+        status.innerText = `❌ ${err.message}`;
+        status.className = "mt-4 text-center font-medium text-red-400";
+      }
+    }
+  </script>
+</body>
+</html>

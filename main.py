@@ -8,10 +8,28 @@ from playwright.sync_api import sync_playwright
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 HISTORICO_FILE = "vagas_enviadas.json"
+CONFIG_FILE = "config.json"
 
-# Configurações de Busca
-TERMOS_BUSCA = ["Analista de Suporte Tecnico", "Suporte SaaS", "Suporte Tecnico"]
-FILTROS_LOCAL = ["Remoto", "Imbituba", "Tubarao"]
+def carregar_configuracao():
+    default_config = {
+        "termos_busca": ["Analista de Suporte Tecnico", "Suporte SaaS", "Suporte Tecnico"],
+        "locais": ["Remoto", "Imbituba", "Tubarão"],
+        "termos_excluir": ["Estágio", "Intern", "Sênior", "Senior", "Lead"],
+        "plataformas": {"gupy": True, "solides": True, "linkedin": True, "indeed": True}
+    }
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Erro ao ler {CONFIG_FILE}, utilizando configurações padrão: {e}")
+    return default_config
+
+config = carregar_configuracao()
+TERMOS_BUSCA = config.get("termos_busca", [])
+FILTROS_LOCAL = config.get("locais", [])
+TERMOS_EXCLUIR = config.get("termos_excluir", [])
+PLATAFORMAS = config.get("plataformas", {})
 
 def carregar_historico():
     if os.path.exists(HISTORICO_FILE):
@@ -25,6 +43,13 @@ def carregar_historico():
 def salvar_historico(historico):
     with open(HISTORICO_FILE, "w", encoding="utf-8") as f:
         json.dump(list(historico), f, indent=2, ensure_ascii=False)
+
+def vaga_deve_ser_excluida(titulo):
+    titulo_lower = titulo.lower()
+    for termo in TERMOS_EXCLUIR:
+        if termo.lower() in titulo_lower:
+            return True
+    return False
 
 def enviar_telegram(vaga):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -62,7 +87,9 @@ def buscar_gupy(termo, historico):
             data = response.json().get("data", [])
             for item in data:
                 vaga_id = f"gupy_{item.get('id')}"
-                if vaga_id in historico:
+                titulo = item.get("name", "")
+
+                if vaga_id in historico or vaga_deve_ser_excluida(titulo):
                     continue
 
                 is_remote = item.get("isRemote", False)
@@ -73,7 +100,7 @@ def buscar_gupy(termo, historico):
                 if is_remote or any(loc.lower() in local_str.lower() for loc in FILTROS_LOCAL):
                     novas_vagas.append({
                         "id": vaga_id,
-                        "titulo": item.get("name"),
+                        "titulo": titulo,
                         "empresa": item.get("companyName", "Não informada"),
                         "local": local_str,
                         "link": item.get("jobUrl"),
@@ -94,7 +121,9 @@ def buscar_solides(termo, historico):
             data = response.json().get("data", [])
             for item in data:
                 vaga_id = f"solides_{item.get('id')}"
-                if vaga_id in historico:
+                titulo = item.get("title", "")
+
+                if vaga_id in historico or vaga_deve_ser_excluida(titulo):
                     continue
 
                 workplace_type = item.get("workplaceType", "")
@@ -105,7 +134,7 @@ def buscar_solides(termo, historico):
                 if "remote" in workplace_type.lower() or any(loc.lower() in local_str.lower() for loc in FILTROS_LOCAL):
                     novas_vagas.append({
                         "id": vaga_id,
-                        "titulo": item.get("title"),
+                        "titulo": titulo,
                         "empresa": item.get("company", {}).get("name", "Não informada"),
                         "local": local_str,
                         "link": f"https://vagas.solides.com.br/vagas/{item.get('id')}",
@@ -119,7 +148,7 @@ def buscar_solides(termo, historico):
 def buscar_linkedin(page, termo, historico):
     novas_vagas = []
     url = f"https://www.linkedin.com/jobs/search?keywords={quote(termo)}&location=Brasil&f_TPR=r86400"
-    print(f"  [LinkedIn] Navegando...")
+    print(f"  [LinkedIn] Buscando termo: {termo}")
     
     try:
         page.goto(url, timeout=30000)
@@ -134,15 +163,16 @@ def buscar_linkedin(page, termo, historico):
                 
                 link = link_elem.get_attribute("href").split("?")[0]
                 vaga_id = f"linkedin_{link.split('-')[-1]}"
-                
-                if vaga_id in historico:
-                    continue
 
                 titulo_elem = card.query_selector(".base-search-card__title")
+                titulo = titulo_elem.inner_text().strip() if titulo_elem else "Título não informado"
+
+                if vaga_id in historico or vaga_deve_ser_excluida(titulo):
+                    continue
+
                 empresa_elem = card.query_selector(".base-search-card__subtitle")
                 local_elem = card.query_selector(".job-search-card__location")
 
-                titulo = titulo_elem.inner_text().strip() if titulo_elem else "Título não informado"
                 empresa = empresa_elem.inner_text().strip() if empresa_elem else "Empresa não informada"
                 local = local_elem.inner_text().strip() if local_elem else "Brasil"
 
@@ -155,10 +185,10 @@ def buscar_linkedin(page, termo, historico):
                         "link": link,
                         "plataforma": "LinkedIn"
                     })
-            except Exception as inner_e:
+            except Exception:
                 continue
     except Exception as e:
-        print(f"  [LinkedIn] Aviso/Erro na raspagem: {e}")
+        print(f"  [LinkedIn] Aviso/Erro na raspagem ({termo}): {e}")
 
     return novas_vagas
 
@@ -166,7 +196,7 @@ def buscar_linkedin(page, termo, historico):
 def buscar_indeed(page, termo, historico):
     novas_vagas = []
     url = f"https://br.indeed.com/jobs?q={quote(termo)}&l=Brasil&fromage=1"
-    print(f"  [Indeed] Navegando...")
+    print(f"  [Indeed] Buscando termo: {termo}")
 
     try:
         page.goto(url, timeout=30000)
@@ -184,13 +214,14 @@ def buscar_indeed(page, termo, historico):
                     continue
 
                 vaga_id = f"indeed_{job_key}"
-                if vaga_id in historico:
+                titulo = title_elem.inner_text().strip()
+
+                if vaga_id in historico or vaga_deve_ser_excluida(titulo):
                     continue
 
                 company_elem = card.query_selector("[data-testid='company-name']")
                 location_elem = card.query_selector("[data-testid='text-location']")
 
-                titulo = title_elem.inner_text().strip()
                 empresa = company_elem.inner_text().strip() if company_elem else "Não informada"
                 local = location_elem.inner_text().strip() if location_elem else "Brasil"
                 link = f"https://br.indeed.com/viewjob?jk={job_key}"
@@ -204,10 +235,10 @@ def buscar_indeed(page, termo, historico):
                         "link": link,
                         "plataforma": "Indeed"
                     })
-            except Exception as inner_e:
+            except Exception:
                 continue
     except Exception as e:
-        print(f"  [Indeed] Aviso/Erro na raspagem: {e}")
+        print(f"  [Indeed] Aviso/Erro na raspagem ({termo}): {e}")
 
     return novas_vagas
 
@@ -215,31 +246,37 @@ def main():
     historico = carregar_historico()
     vagas_para_enviar = []
 
-    print("🔎 Iniciando varredura em todas as plataformas...")
+    print("🔎 Iniciando varredura com as configurações do config.json...")
 
-    # 1. API - Gupy e Solides
+    # 1. APIs (Gupy e Solides)
     for termo in TERMOS_BUSCA:
-        print(f"Buscando via API: {termo}")
-        vagas_para_enviar.extend(buscar_gupy(termo, historico))
-        vagas_para_enviar.extend(buscar_solides(termo, historico))
+        if PLATAFORMAS.get("gupy", True):
+            vagas_para_enviar.extend(buscar_gupy(termo, historico))
+        if PLATAFORMAS.get("solides", True):
+            vagas_para_enviar.extend(buscar_solides(termo, historico))
 
-    # 2. Navegador Headless - LinkedIn e Indeed
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"]
-        )
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
+    # 2. Playwright (LinkedIn e Indeed)
+    usar_linkedin = PLATAFORMAS.get("linkedin", True)
+    usar_indeed = PLATAFORMAS.get("indeed", True)
 
-        for termo in TERMOS_BUSCA:
-            print(f"Buscando via Playwright: {termo}")
-            vagas_para_enviar.extend(buscar_linkedin(page, termo, historico))
-            vagas_para_enviar.extend(buscar_indeed(page, termo, historico))
+    if usar_linkedin or usar_indeed:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"]
+            )
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
 
-        browser.close()
+            for termo in TERMOS_BUSCA:
+                if usar_linkedin:
+                    vagas_para_enviar.extend(buscar_linkedin(page, termo, historico))
+                if usar_indeed:
+                    vagas_para_enviar.extend(buscar_indeed(page, termo, historico))
+
+            browser.close()
 
     enviadas_com_sucesso = 0
     for vaga in vagas_para_enviar:
