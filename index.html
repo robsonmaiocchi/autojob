@@ -81,9 +81,7 @@
   <script>
     const REPO = "robsonmaiocchi/autojob";
     const FILE_PATH = "config.json";
-    let fileSha = "";
 
-    // Filtros pré-definidos para preenchimento rápido
     const DEFAULT_CONFIG = {
       termos_busca: [
         "Analista de Suporte Tecnico",
@@ -127,7 +125,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Preenche previamente com as suas definições
       preencherFormulario(DEFAULT_CONFIG);
 
       const savedToken = localStorage.getItem("autojob_pat");
@@ -149,14 +146,26 @@
       return btoa(binary);
     }
 
+    async function obterShaAtual(token) {
+      const headers = token ? { "Authorization": `token ${token}` } : {};
+      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        return data.sha;
+      }
+      return null;
+    }
+
     async function carregarConfig() {
       const status = document.getElementById("status");
+      const token = document.getElementById("ghToken").value;
       status.innerText = "Carregando do GitHub...";
       try {
-        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`);
+        const headers = token ? { "Authorization": `token ${token}` } : {};
+        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, { headers });
+        if (!res.ok) throw new Error("Não foi possível carregar o arquivo.");
+
         const data = await res.json();
-        fileSha = data.sha;
-        
         const contentJson = base64ToUtf8(data.content.replace(/\n/g, ''));
         const content = JSON.parse(contentJson);
 
@@ -180,30 +189,36 @@
       }
 
       localStorage.setItem("autojob_pat", token);
-      status.innerText = "Salvando no repositório...";
-
-      const newConfig = {
-        termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
-        locais: document.getElementById("locais").value.split(",").map(s => s.trim()).filter(Boolean),
-        termos_excluir: document.getElementById("termosExcluir").value.split(",").map(s => s.trim()).filter(Boolean),
-        plataformas: {
-          gupy: document.getElementById("platGupy").checked,
-          solides: document.getElementById("platSolides").checked,
-          linkedin: document.getElementById("platLinkedin").checked,
-          indeed: document.getElementById("platIndeed").checked
-        }
-      };
-
-      const jsonString = JSON.stringify(newConfig, null, 2);
-      const contentBase64 = utf8ToBase64(jsonString);
-
-      const body = {
-        message: "chore: atualiza filtros e termos de busca via painel web",
-        content: contentBase64,
-        sha: fileSha
-      };
+      status.innerText = "Obtendo versão mais recente e salvando...";
 
       try {
+        // Busca o SHA atualizado diretamente da API no momento do salvamento
+        const currentSha = await obterShaAtual(token);
+        if (!currentSha) {
+          throw new Error("Erro ao consultar a versão mais recente do arquivo no GitHub.");
+        }
+
+        const newConfig = {
+          termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
+          locais: document.getElementById("locais").value.split(",").map(s => s.trim()).filter(Boolean),
+          termos_excluir: document.getElementById("termosExcluir").value.split(",").map(s => s.trim()).filter(Boolean),
+          plataformas: {
+            gupy: document.getElementById("platGupy").checked,
+            solides: document.getElementById("platSolides").checked,
+            linkedin: document.getElementById("platLinkedin").checked,
+            indeed: document.getElementById("platIndeed").checked
+          }
+        };
+
+        const jsonString = JSON.stringify(newConfig, null, 2);
+        const contentBase64 = utf8ToBase64(jsonString);
+
+        const body = {
+          message: "chore: atualiza filtros via painel web",
+          content: contentBase64,
+          sha: currentSha
+        };
+
         const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
           method: "PUT",
           headers: {
@@ -214,12 +229,12 @@
         });
 
         if (res.ok) {
-          const resData = await res.json();
-          fileSha = resData.content.sha;
           status.innerText = "🚀 Filtros salvos com sucesso no GitHub!";
           status.className = "mt-4 text-center font-medium text-green-400";
+        } else if (res.status === 401 || res.status === 403) {
+          throw new Error("Erro de permissão ou token inválido.");
         } else {
-          throw new Error("Erro de permissão ou token inválido");
+          throw new Error(`Erro na API do GitHub (Status: ${res.status}).`);
         }
       } catch (err) {
         status.innerText = `❌ ${err.message}`;
