@@ -3,6 +3,7 @@ import json
 import re
 import hashlib
 import urllib.parse
+import time
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -145,30 +146,29 @@ def generate_hash(titulo, empresa, plataforma):
     text = f"{titulo.strip().lower()}_{empresa.strip().lower()}_{plataforma.strip().lower()}"
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
-def send_telegram(mensagem, link_vaga):
-    """Envia notificação para o Telegram com botões inline interativos."""
+def send_telegram(mensagem, link_vaga=None):
+    """Envia notificação para o Telegram com botões inline interativos (se houver link)."""
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID não definidos.")
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-    # Teclado com botão Inline para aplicação direta
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {"text": "🚀 Candidatar-se Agora", "url": link_vaga}
-            ]
-        ]
-    }
-
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": mensagem,
         "parse_mode": "HTML",
-        "disable_web_page_preview": True,
-        "reply_markup": reply_markup
+        "disable_web_page_preview": True
     }
+
+    if link_vaga:
+        payload["reply_markup"] = {
+            "inline_keyboard": [
+                [
+                    {"text": "🚀 Candidatar-se Agora", "url": link_vaga}
+                ]
+            ]
+        }
 
     try:
         res = fetch_url(url, method="POST", json_data=payload)
@@ -418,6 +418,12 @@ def main():
     print(f"📊 Total de vagas capturadas antes da desduplicação: {len(vagas_encontradas)}")
 
     novas_vagas_count = 0
+    high_match_count = 0
+    medium_match_count = 0
+    general_match_count = 0
+    
+    plat_counts = {}
+
     hashes_existentes = set(history.get("hashes", []))
     detalhes_recentes = history.get("detalhes", [])
 
@@ -427,8 +433,19 @@ def main():
             hashes_existentes.add(h)
             novas_vagas_count += 1
 
+            # Contabilidade por plataforma
+            plat = vaga["plataforma"]
+            plat_counts[plat] = plat_counts.get(plat, 0) + 1
+
             # Calcula a relevância da vaga
             score, badge = calcular_match_score(vaga["titulo"], vaga["empresa"], vaga["local"])
+
+            if score >= 70:
+                high_match_count += 1
+            elif score >= 40:
+                medium_match_count += 1
+            else:
+                general_match_count += 1
 
             # Monta notificação do Telegram com Match Score
             msg = (
@@ -441,7 +458,6 @@ def main():
             )
             
             send_telegram(msg, vaga["link"])
-            import time
             time.sleep(1) # Intervalo suave entre mensagens para evitar Rate Limit do Telegram
 
             # Adiciona aos detalhes do histórico
@@ -460,7 +476,23 @@ def main():
     
     save_history(history)
 
-    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas com pontuação de relevância.")
+    # Envia Resumo do Execução se houver novas vagas
+    if novas_vagas_count > 0:
+        resumo_plat = "\n".join([f"• {k}: {v}" for k, v in plat_counts.items()])
+        msg_resumo = (
+            f"📊 <b>RESUMO DA VARREDURA DE VAGAS</b>\n"
+            f"----------------------------------\n"
+            f"🔹 <b>Novas Vagas Encontradas:</b> {novas_vagas_count}\n"
+            f"🔥 <b>Alta Relevância:</b> {high_match_count}\n"
+            f"🟡 <b>Média Relevância:</b> {medium_match_count}\n"
+            f"⚪ <b>Outras:</b> {general_match_count}\n\n"
+            f"🌐 <b>Por Plataforma:</b>\n{resumo_plat}\n"
+            f"----------------------------------\n"
+            f"⚡ <i>AutoJob executado com sucesso!</i>"
+        )
+        send_telegram(msg_resumo)
+
+    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas e resumo gerado.")
 
 if __name__ == "__main__":
     main()
