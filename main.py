@@ -20,16 +20,23 @@ HISTORY_FILE = "history.json"
 
 ua = UserAgent(fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
 
-def get_headers():
+def get_headers(referer="https://www.google.com/"):
     return {
         "User-Agent": ua.random,
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
         "Accept": "application/json, text/plain, */*",
-        "Referer": "https://www.google.com/"
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": referer,
+        "Origin": referer.rstrip("/"),
+        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site"
     }
 
-def fetch_url(url, method="GET", json_data=None, params=None, timeout=12):
-    headers = get_headers()
+def fetch_url(url, method="GET", json_data=None, params=None, timeout=12, referer="https://www.google.com/"):
+    headers = get_headers(referer=referer)
     try:
         if method.upper() == "POST":
             response = requests.post(url, json=json_data, headers=headers, params=params, timeout=timeout)
@@ -139,11 +146,10 @@ def deve_excluir(titulo, termos_excluir):
 
 def buscar_gupy(termos, locais, termos_excluir):
     vagas = []
-    # Rota pública atualizada da busca unificada da Gupy Portal
     base_url = "https://portal.api.gupy.io/api/v1/jobs"
     for termo in termos:
         params = {"jobName": termo, "limit": 20, "offset": 0}
-        res = fetch_url(base_url, params=params)
+        res = fetch_url(base_url, params=params, referer="https://portal.gupy.io/")
         if not res:
             continue
         try:
@@ -168,21 +174,23 @@ def buscar_gupy(termos, locais, termos_excluir):
 
 def buscar_solides(termos, locais, termos_excluir):
     vagas = []
-    # API publica direta da plataforma Sólides Vacancies
-    base_url = "https://vagas.solides.com.br/api/v1/jobs/search"
+    base_url = "https://vacancy-service.vagas.solides.com.br/api/v1/vacancies/search"
     for termo in termos:
-        params = {"title": termo, "take": 20, "page": 1}
-        res = fetch_url(base_url, params=params)
+        payload = {"title": termo, "take": 20, "page": 1}
+        res = fetch_url(base_url, method="POST", json_data=payload, referer="https://vagas.solides.com.br/")
         if not res:
             continue
         try:
             data = res.json()
-            for item in data.get("data", []):
-                titulo = item.get("title", "")
+            items = data.get("data", []) if isinstance(data, dict) else []
+            for item in items:
+                titulo = item.get("title") or item.get("name", "")
                 if deve_excluir(titulo, termos_excluir):
                     continue
                 empresa = item.get("company", {}).get("name", "Sólides") if isinstance(item.get("company"), dict) else "Sólides"
-                link = item.get("link", "")
+                link = item.get("link") or item.get("url", "")
+                if link and not link.startswith("http"):
+                    link = f"https://vagas.solides.com.br{link}"
                 local = item.get("city", {}).get("name", "Brasil") if isinstance(item.get("city"), dict) else "Brasil"
                 vagas.append({
                     "titulo": titulo,
@@ -200,7 +208,7 @@ def buscar_linkedin(termos, locais, termos_excluir):
     for termo in termos:
         termo_encoded = urllib.parse.quote(termo)
         url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={termo_encoded}&location=Brasil&start=0"
-        res = fetch_url(url)
+        res = fetch_url(url, referer="https://www.linkedin.com/")
         if not res:
             continue
         soup = BeautifulSoup(res.text, "html.parser")
@@ -229,9 +237,8 @@ def buscar_linkedin(termos, locais, termos_excluir):
 
 def buscar_remotar(termos, locais, termos_excluir):
     vagas = []
-    # Scraping direto do feed público de vagas da Remotar
-    url = "https://remotar.com.br/vagas"
-    res = fetch_url(url)
+    url = "https://remotar.com.br/"
+    res = fetch_url(url, referer="https://remotar.com.br/")
     if not res:
         return vagas
     soup = BeautifulSoup(res.text, "html.parser")
@@ -252,32 +259,32 @@ def buscar_remotar(termos, locais, termos_excluir):
 
 def buscar_coodesh(termos, locais, termos_excluir):
     vagas = []
-    # API publica GraphQL/REST simplificada Coodesh
-    url = "https://coodesh.com/api/v1/jobs/public"
+    url = "https://api.coodesh.com/v1/public/jobs"
     for termo in termos:
-        params = {"search": termo}
-        res = fetch_url(url, params=params)
+        params = {"search": termo, "limit": 20}
+        res = fetch_url(url, params=params, referer="https://coodesh.com/")
         if not res:
             continue
         try:
             data = res.json()
-            items = data.get("jobs", []) if isinstance(data, dict) else []
+            items = data.get("hits", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
             for item in items:
                 titulo = item.get("title", "")
                 if deve_excluir(titulo, termos_excluir):
                     continue
-                empresa = item.get("companyName", "Coodesh")
+                empresa = item.get("company", {}).get("name", "Coodesh") if isinstance(item.get("company"), dict) else "Coodesh"
                 slug = item.get("slug", "")
                 link = f"https://coodesh.com/vagas/{slug}" if slug else "https://coodesh.com/vagas"
+                local_str = "Remoto" if item.get("homeOffice", False) else "Presencial/Híbrido"
                 vagas.append({
                     "titulo": titulo,
                     "empresa": empresa,
-                    "local": "Remoto" if item.get("homeOffice") else "Presencial/Híbrido",
+                    "local": local_str,
                     "link": link,
                     "plataforma": "Coodesh"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"⚠️ Erro no parsing Coodesh: {e}")
     return vagas
 
 # ==============================================================================
