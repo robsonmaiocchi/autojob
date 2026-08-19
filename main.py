@@ -29,8 +29,7 @@ def carregar_configuracao():
     if os.path.exists("config.json"):
         try:
             with open("config.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data
+                return json.load(f)
         except Exception as e:
             print(f"⚠️ Erro ao ler config.json: {e}")
     return config_default
@@ -102,7 +101,6 @@ def validar_fit_vaga(titulo, local, descricao, config):
         ])
     ]
     
-    # Adicionar flexibilidade extra para SC e Brasil no texto do local/descrição
     texto_checar = f"{local_norm} {desc_norm}"
     passou_local = any(loc in texto_checar for loc in locais_permitidos)
     
@@ -135,12 +133,11 @@ def buscar_gupy(termos, config):
     print("🔎 Consultando Gupy...", flush=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+        "Accept": "application/json, text/plain, */*"
     }
     for termo in termos:
         try:
-            url = f"https://portal.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
+            url = f"https://portal-api.gupy.io/api/v1/jobs?jobName={requests.utils.quote(termo)}&limit=20"
             res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200 and res.text.strip().startswith("{"):
                 data = res.json()
