@@ -17,14 +17,83 @@
             --accent-yellow: #f59e0b;
             --accent-red: #ef4444;
             --border-color: #334155;
+            --sidebar-width: 250px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-primary); color: var(--text-main); padding: 24px; min-height: 100vh; }
+        body { background-color: var(--bg-primary); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .sidebar-menu li a:hover, .sidebar-menu li a.active {
+            background: var(--bg-hover);
+            color: var(--text-main);
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        /* ================= CONTEÚDO PRINCIPAL ================= */
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            transition: width 0.3s ease;
+            width: 100%;
+        }
 
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .header-title h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        
+        .toggle-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: 0.2s;
+        }
+        .toggle-btn:hover { background: var(--bg-hover); }
+
+        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: var(--text-main); }
+        .header-title p { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+
         .btn-export { background: var(--accent-blue); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-export:hover { opacity: 0.9; }
 
@@ -65,94 +134,117 @@
         .hover-card { display: none; position: absolute; left: 10px; top: 100%; z-index: 100; background: #0f172a; border: 1px solid var(--accent-blue); padding: 12px; border-radius: 8px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 0.8rem; line-height: 1.4; color: var(--text-main); pointer-events: none; }
         .title-cell:hover .hover-card { display: block; }
 
-        @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { 
+            .charts-grid { grid-template-columns: 1fr; } 
+            .sidebar { position: fixed; height: 100vh; }
+            .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="header-title">
-            <h1>🚀 AutoJob Dashboard</h1>
-            <p>Painel Inteligente de Monitoramento e Oportunidades</p>
+    <!-- SIDEBAR RETRÁTIL -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>🚀 AutoJob</span>
         </div>
-        <button class="btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
-    </header>
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active">📊 Visão Geral</a></li>
+            <li><a href="#" onclick="aplicarFiltroMenu('high')">🔥 Alta Relevância</a></li>
+            <li><a href="#" onclick="aplicarFiltroMenu('fav')">⭐ Favoritas</a></li>
+            <li><a href="#" onclick="aplicarFiltroMenu('applied')">✅ Candidatado</a></li>
+        </ul>
+    </aside>
 
-    <div class="metrics-grid">
-        <div class="metric-card">
-            <span>Total Capturado</span>
-            <h2 id="metric-total">0</h2>
-        </div>
-        <div class="metric-card">
-            <span>Alta Relevância</span>
-            <h2 id="metric-high" style="color: var(--accent-green)">0</h2>
-        </div>
-        <div class="metric-card">
-            <span>Favoritas</span>
-            <h2 id="metric-fav" style="color: var(--accent-yellow)">0</h2>
-        </div>
-        <div class="metric-card">
-            <span>Candidatado</span>
-            <h2 id="metric-applied" style="color: var(--accent-blue)">0</h2>
-        </div>
-    </div>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+        <header>
+            <div class="header-left">
+                <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+                <div class="header-title">
+                    <h1>AutoJob Dashboard</h1>
+                    <p>Painel Inteligente de Monitoramento e Oportunidades</p>
+                </div>
+            </div>
+            <button class="btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+        </header>
 
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h3>Distribuição por Plataforma</h3>
-            <canvas id="chartPlataformas"></canvas>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <span>Total Capturado</span>
+                <h2 id="metric-total">0</h2>
+            </div>
+            <div class="metric-card">
+                <span>Alta Relevância</span>
+                <h2 id="metric-high" style="color: var(--accent-green)">0</h2>
+            </div>
+            <div class="metric-card">
+                <span>Favoritas</span>
+                <h2 id="metric-fav" style="color: var(--accent-yellow)">0</h2>
+            </div>
+            <div class="metric-card">
+                <span>Candidatado</span>
+                <h2 id="metric-applied" style="color: var(--accent-blue)">0</h2>
+            </div>
         </div>
-        <div class="chart-card">
-            <h3>Nível de Match</h3>
-            <canvas id="chartMatch"></canvas>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Distribuição por Plataforma</h3>
+                <canvas id="chartPlataformas"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Nível de Match</h3>
+                <canvas id="chartMatch"></canvas>
+            </div>
         </div>
-    </div>
 
-    <div class="filters-bar">
-        <input type="text" id="filter-search" placeholder="🔍 Buscar cargo ou empresa..." oninput="renderTable()">
-        <select id="filter-score" onchange="renderTable()">
-            <option value="">🎯 Todas as Relevâncias</option>
-            <option value="high">🔥 Alta (>= 70%)</option>
-            <option value="medium">🟡 Média (40% - 69%)</option>
-            <option value="low">⚪ Geral (< 40%)</option>
-        </select>
-        <select id="filter-plat" onchange="renderTable()">
-            <option value="">🌐 Todas as Plataformas</option>
-            <option value="Gupy">Gupy</option>
-            <option value="LinkedIn">LinkedIn</option>
-            <option value="Sólides">Sólides</option>
-            <option value="Remotar">Remotar</option>
-            <option value="Coodesh">Coodesh</option>
-        </select>
-        <select id="filter-status" onchange="renderTable()">
-            <option value="">📋 Todos os Status</option>
-            <option value="fav">⭐ Apenas Favoritas</option>
-            <option value="applied">✅ Apenas Candidatadas</option>
-        </select>
-        <select id="filter-sort" onchange="renderTable()">
-            <option value="date-desc">📅 Mais Recentes</option>
-            <option value="score-desc">🔥 Maior Score</option>
-        </select>
-    </div>
+        <div class="filters-bar">
+            <input type="text" id="filter-search" placeholder="🔍 Buscar cargo ou empresa..." oninput="renderTable()">
+            <select id="filter-score" onchange="renderTable()">
+                <option value="">🎯 Todas as Relevâncias</option>
+                <option value="high">🔥 Alta (>= 70%)</option>
+                <option value="medium">🟡 Média (40% - 69%)</option>
+                <option value="low">⚪ Geral (< 40%)</option>
+            </select>
+            <select id="filter-plat" onchange="renderTable()">
+                <option value="">🌐 Todas as Plataformas</option>
+                <option value="Gupy">Gupy</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Sólides">Sólides</option>
+                <option value="Remotar">Remotar</option>
+                <option value="Coodesh">Coodesh</option>
+            </select>
+            <select id="filter-status" onchange="renderTable()">
+                <option value="">📋 Todos os Status</option>
+                <option value="fav">⭐ Apenas Favoritas</option>
+                <option value="applied">✅ Apenas Candidatadas</option>
+            </select>
+            <select id="filter-sort" onchange="renderTable()">
+                <option value="date-desc">📅 Mais Recentes</option>
+                <option value="score-desc">🔥 Maior Score</option>
+            </select>
+        </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 40px;">★</th>
-                    <th>Título do Cargo</th>
-                    <th>Empresa</th>
-                    <th>Plataforma</th>
-                    <th>Match Score</th>
-                    <th>Capturado Em</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="vagas-table-body">
-                <tr><td colspan="7" style="text-align: center; padding: 20px;">Carregando histórico de vagas...</td></tr>
-            </tbody>
-        </table>
-    </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">★</th>
+                        <th>Título do Cargo</th>
+                        <th>Empresa</th>
+                        <th>Plataforma</th>
+                        <th>Match Score</th>
+                        <th>Capturado Em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="vagas-table-body">
+                    <tr><td colspan="7" style="text-align: center; padding: 20px;">Carregando histórico de vagas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
 
     <script>
         let rawData = [];
@@ -160,6 +252,25 @@
         let applied = JSON.parse(localStorage.getItem('autojob_applied') || '[]');
         let chartPlatInstance = null;
         let chartMatchInstance = null;
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function aplicarFiltroMenu(tipo) {
+            // Reseta seletores
+            document.getElementById('filter-score').value = '';
+            document.getElementById('filter-status').value = '';
+
+            if (tipo === 'high') {
+                document.getElementById('filter-score').value = 'high';
+            } else if (tipo === 'fav') {
+                document.getElementById('filter-status').value = 'fav';
+            } else if (tipo === 'applied') {
+                document.getElementById('filter-status').value = 'applied';
+            }
+            renderTable();
+        }
 
         function getVagaKey(vaga) {
             return `${vaga.titulo}_${vaga.empresa}_${vaga.plataforma}`.toLowerCase();
@@ -174,7 +285,7 @@
             } catch (e) {
                 console.error("Erro ao carregar dados:", e);
                 document.getElementById('vagas-table-body').innerHTML = 
-                    `<tr><td colspan="7" style="text-align: center; color: var(--accent-red); padding: 20px;">Erro ao carregar history.json. Execute o scraper para gerar o histórico.</td></tr>`;
+                    `<tr><td colspan="7" style="text-align: center; color: var(--accent-red); padding: 20px;">Erro ao carregar history.json.</td></tr>`;
             }
         }
 
