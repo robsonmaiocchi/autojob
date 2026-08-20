@@ -15,14 +15,13 @@
     
     <style>
         :root {
-            --bg-body: #0f172a;           /* Fundo geral escuro (Slate 900) */
-            --card-bg: #1e293b;           /* Fundo dos cards e tabela (Slate 800) */
-            --header-bg: #0b132b;         /* Fundo do cabeçalho */
-            --text-main: #f8fafc;         /* Texto principal claro */
-            --text-muted: #94a3b8;        /* Texto secundário */
-            --border-color: #334155;      /* Bordas discretas em tom escuro */
-            --primary-color: #3b82f6;     /* Azul de destaque */
-            --input-bg: #0f172a;          /* Fundo dos campos de busca/select */
+            --bg-body: #0f172a;           /* Slate 900 */
+            --card-bg: #1e293b;           /* Slate 800 */
+            --text-main: #f8fafc;         
+            --text-muted: #94a3b8;        
+            --border-color: #334155;      
+            --primary-color: #3b82f6;     
+            --input-bg: #0f172a;          
         }
 
         body { 
@@ -78,24 +77,23 @@
             border-radius: 16px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
             padding: 1.5rem;
+            position: relative;
         }
 
-        /* Filtros e Busca em Dark Mode */
+        /* Filtros e Busca */
         .form-control, .form-select, .input-group-text {
             background-color: var(--input-bg) !important;
             border-color: var(--border-color) !important;
             color: var(--text-main) !important;
             font-size: 0.9rem;
         }
-        .form-control::placeholder {
-            color: #64748b;
-        }
+        .form-control::placeholder { color: #64748b; }
         .form-control:focus, .form-select:focus {
             border-color: var(--primary-color) !important;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
 
-        /* Tabela Estilizada (Dark Cards) */
+        /* Tabela Estilizada */
         .custom-table {
             width: 100%;
             border-collapse: separate;
@@ -156,7 +154,11 @@
         .platform-remotar { background-color: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
         .platform-coodesh { background-color: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
 
-        /* Textos da Tabela */
+        /* Textos e Células */
+        .vaga-title-container {
+            position: relative;
+            cursor: pointer;
+        }
         .vaga-title {
             color: #f1f5f9;
             font-size: 0.93rem;
@@ -169,6 +171,26 @@
             font-weight: 500;
         }
 
+        /* Painel Flutuante (Hover Card) */
+        .hover-card {
+            position: absolute;
+            z-index: 1050;
+            width: 320px;
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+            display: none;
+            pointer-events: none; /* Evita interferir com o movimento do mouse */
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .hover-card.show {
+            display: block;
+            opacity: 1;
+        }
+
         /* Botões de Ação */
         .btn-action-group .btn {
             padding: 0.35rem 0.65rem;
@@ -176,30 +198,12 @@
             border-radius: 6px;
             font-weight: 500;
         }
-        .btn-outline-secondary {
-            color: #94a3b8;
-            border-color: #475569;
-        }
-        .btn-outline-secondary:hover {
-            background-color: #334155;
-            color: #f8fafc;
-        }
-        .btn-outline-danger {
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.4);
-        }
-        .btn-outline-danger:hover {
-            background-color: #dc2626;
-            color: white;
-        }
-        .btn-outline-success {
-            color: #4ade80;
-            border-color: rgba(34, 197, 94, 0.4);
-        }
-        .btn-outline-success:hover {
-            background-color: #16a34a;
-            color: white;
-        }
+        .btn-outline-secondary { color: #94a3b8; border-color: #475569; }
+        .btn-outline-secondary:hover { background-color: #334155; color: #f8fafc; }
+        .btn-outline-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+        .btn-outline-danger:hover { background-color: #dc2626; color: white; }
+        .btn-outline-success { color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+        .btn-outline-success:hover { background-color: #16a34a; color: white; }
     </style>
 </head>
 <body>
@@ -209,6 +213,18 @@
             <h2 class="fw-bold mb-1">🚀 AutoJob Dashboard</h2>
             <p class="text-white-50 mb-0 small">Painel Inteligente de Monitoramento e Oportunidades</p>
         </div>
+    </div>
+
+    <!-- Hover Card Flutuante NATIVO -->
+    <div id="hoverCard" class="hover-card">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span id="hoverCardPlat"></span>
+            <span id="hoverCardScore"></span>
+        </div>
+        <h6 id="hoverCardTitle" class="fw-bold text-light mb-1" style="font-size: 0.95rem;"></h6>
+        <div id="hoverCardCompany" class="text-primary small fw-semibold mb-2"></div>
+        <hr class="border-secondary my-2">
+        <div id="hoverCardDesc" class="text-secondary small" style="font-size: 0.82rem; max-height: 120px; overflow-y: auto; line-height: 1.4;"></div>
     </div>
 
     <div class="container mb-5">
@@ -291,6 +307,7 @@
     <script>
         let vagasData = [];
         let statusMap = JSON.parse(localStorage.getItem('autojob_status') || '{}');
+        const hoverCard = document.getElementById('hoverCard');
 
         async function loadDashboard() {
             try {
@@ -350,7 +367,7 @@
                 return;
             }
 
-            vagas.forEach(v => {
+            vagas.forEach((v, idx) => {
                 const key = getVagaKey(v);
                 const currentStatus = statusMap[key] || 'pending';
 
@@ -372,8 +389,10 @@
 
                 tr.innerHTML = `
                     <td>
-                        <div class="vaga-title">${v.titulo}</div>
-                        ${isApplied ? '<span class="badge bg-info text-dark mt-1" style="font-size:0.7rem;">Candidatado</span>' : ''}
+                        <div class="vaga-title-container" data-idx="${idx}">
+                            <div class="vaga-title">${v.titulo}</div>
+                            ${isApplied ? '<span class="badge bg-info text-dark mt-1" style="font-size:0.7rem;">Candidatado</span>' : ''}
+                        </div>
                     </td>
                     <td><span class="vaga-company">${v.empresa}</span></td>
                     <td>${getPlatformBadge(v.plataforma)}</td>
@@ -396,6 +415,43 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+            });
+
+            setupHoverCards(vagas);
+        }
+
+        function setupHoverCards(vagas) {
+            document.querySelectorAll('.vaga-title-container').forEach(el => {
+                el.addEventListener('mouseenter', (e) => {
+                    const idx = el.getAttribute('data-idx');
+                    const vaga = vagas[idx];
+                    if (!vaga) return;
+
+                    document.getElementById('hoverCardTitle').innerText = vaga.titulo;
+                    document.getElementById('hoverCardCompany').innerText = vaga.empresa;
+                    document.getElementById('hoverCardPlat').innerHTML = getPlatformBadge(vaga.plataforma);
+
+                    const score = vaga.score || 0;
+                    let badgeClass = score >= 70 ? 'badge-high' : (score >= 40 ? 'badge-medium' : 'badge-low');
+                    document.getElementById('hoverCardScore').innerHTML = `<span class="pill-badge ${badgeClass}">${score}% Match</span>`;
+
+                    const desc = vaga.resumo || vaga.descricao || 'Sem resumo detalhado disponível para esta vaga. Clique em "Ver" para acessar a descrição completa no site original.';
+                    document.getElementById('hoverCardDesc').innerText = desc;
+
+                    // Posicionar o card próximo ao mouse
+                    hoverCard.style.top = (e.pageY + 15) + 'px';
+                    hoverCard.style.left = (e.pageX + 15) + 'px';
+                    hoverCard.classList.add('show');
+                });
+
+                el.addEventListener('mousemove', (e) => {
+                    hoverCard.style.top = (e.pageY + 15) + 'px';
+                    hoverCard.style.left = (e.pageX + 15) + 'px';
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    hoverCard.classList.remove('show');
+                });
             });
         }
 
