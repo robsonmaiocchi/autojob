@@ -447,8 +447,53 @@
             alert('Preferências salvas com sucesso!');
         }
 
-        function executarVarredura() {
-            alert('A varredura manual é disparada via GitHub Actions ou localmente executando o script main.py!');
+        async function executarVarredura() {
+            const btnScan = document.querySelector('.btn-scan');
+            
+            // Tenta recuperar o token salvo ou solicita ao usuário
+            let token = localStorage.getItem('github_pat');
+            if (!token) {
+                token = prompt('Informe seu GitHub Personal Access Token (PAT) com permissão de workflow:');
+                if (token) {
+                    localStorage.setItem('github_pat', token.trim());
+                }
+            }
+
+            if (!token) return;
+
+            // Feedback visual no botão
+            const originalText = btnScan.innerHTML;
+            btnScan.disabled = true;
+            btnScan.innerHTML = '⏳ Disparando...';
+
+            try {
+                const response = await fetch('https://api.github.com/repos/robsonmaiocchi/autojob/actions/workflows/main.yml/dispatches', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/vnd.github+json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    },
+                    body: JSON.stringify({
+                        ref: 'main'
+                    })
+                });
+
+                if (response.status === 204 || response.ok) {
+                    alert('🚀 Varredura manual disparada com sucesso no GitHub Actions!\nEm alguns instantes as novas vagas serão processadas.');
+                } else if (response.status === 401 || response.status === 403) {
+                    alert('❌ Token inválido ou sem permissões suficientes. O token salvo foi removido, tente novamente.');
+                    localStorage.removeItem('github_pat');
+                } else {
+                    alert(`❌ Erro ao disparar varredura (Status: ${response.status}). Verifique as permissões do repositório.`);
+                }
+            } catch (error) {
+                console.error("Erro na requisição:", error);
+                alert('❌ Falha na conexão com a API do GitHub.');
+            } finally {
+                btnScan.disabled = false;
+                btnScan.innerHTML = originalText;
+            }
         }
 
         function getVagaKey(vaga) {
