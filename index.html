@@ -207,7 +207,7 @@
             <div class="col-md-3">
                 <div class="stat-card">
                     <span class="stat-title">Última Atualização</span>
-                    <div id="stat-date" class="stat-value text-secondary fs-6 mt-2">-</div>
+                    <div id="stat-date" class="stat-value text-secondary" style="font-size: 1.1rem; line-height: 1.2;">-</div>
                 </div>
             </div>
         </div>
@@ -288,7 +288,17 @@
             const appliedCount = Object.values(statusMap).filter(s => s === 'applied').length;
             document.getElementById('stat-applied').innerText = appliedCount;
             
-            document.getElementById('stat-date').innerText = detalhes.length > 0 ? detalhes[0].data : 'N/A';
+            if (detalhes.length > 0 && detalhes[0].data) {
+                const parts = detalhes[0].data.split(' ');
+                if (parts.length === 2) {
+                    // Formata para Data na primeira linha e Hora em tom suave logo abaixo
+                    document.getElementById('stat-date').innerHTML = `${parts[0]}<br><span style="font-size: 0.85rem; color: #94a3b8; font-weight: 500;">${parts[1]}</span>`;
+                } else {
+                    document.getElementById('stat-date').innerText = detalhes[0].data;
+                }
+            } else {
+                document.getElementById('stat-date').innerText = 'N/A';
+            }
         }
 
         function getPlatformBadge(plat) {
