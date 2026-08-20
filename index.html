@@ -15,12 +15,14 @@
     
     <style>
         :root {
-            --bg-body: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --primary-color: #2563eb;
-            --border-color: #e2e8f0;
+            --bg-body: #0f172a;           /* Fundo geral escuro (Slate 900) */
+            --card-bg: #1e293b;           /* Fundo dos cards e tabela (Slate 800) */
+            --header-bg: #0b132b;         /* Fundo do cabeçalho */
+            --text-main: #f8fafc;         /* Texto principal claro */
+            --text-muted: #94a3b8;        /* Texto secundário */
+            --border-color: #334155;      /* Bordas discretas em tom escuro */
+            --primary-color: #3b82f6;     /* Azul de destaque */
+            --input-bg: #0f172a;          /* Fundo dos campos de busca/select */
         }
 
         body { 
@@ -32,11 +34,11 @@
 
         /* Header */
         .header-bg { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%); 
             color: white; 
             padding: 2.2rem 0; 
             margin-bottom: 2rem; 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid var(--border-color);
         }
 
         /* Cards de Métricas */
@@ -49,12 +51,12 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
         .stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-color: #475569;
         }
         .stat-title {
             font-size: 0.75rem;
@@ -74,23 +76,26 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
             padding: 1.5rem;
         }
 
-        /* Filtros */
-        .form-control, .form-select {
-            border-color: var(--border-color);
-            border-radius: 8px;
+        /* Filtros e Busca em Dark Mode */
+        .form-control, .form-select, .input-group-text {
+            background-color: var(--input-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-main) !important;
             font-size: 0.9rem;
-            padding: 0.6rem 1rem;
+        }
+        .form-control::placeholder {
+            color: #64748b;
         }
         .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
 
-        /* Tabela Estilizada (Estilo Cards) */
+        /* Tabela Estilizada (Dark Cards) */
         .custom-table {
             width: 100%;
             border-collapse: separate;
@@ -107,14 +112,12 @@
             padding: 0.75rem 1rem;
         }
         .custom-table tbody tr {
-            background-color: #ffffff;
+            background-color: #1e293b;
             transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .custom-table tbody tr:hover {
-            background-color: #f8fafc;
+            background-color: #24334a;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .custom-table td {
             padding: 1rem;
@@ -133,7 +136,7 @@
             border-bottom-right-radius: 10px;
         }
 
-        /* Pílulas (Badges) */
+        /* Badges e Pílulas */
         .pill-badge {
             border-radius: 50rem;
             padding: 0.35em 0.8em;
@@ -143,33 +146,59 @@
             align-items: center;
             justify-content: center;
         }
-        .badge-high { background-color: #dcfce7; color: #166534; }
-        .badge-medium { background-color: #fef9c3; color: #854d0e; }
-        .badge-low { background-color: #f1f5f9; color: #475569; }
+        .badge-high { background-color: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-medium { background-color: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
+        .badge-low { background-color: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
 
-        .platform-gupy { background-color: #e0f2fe; color: #0369a1; }
-        .platform-linkedin { background-color: #e0e7ff; color: #3730a3; }
-        .platform-solides { background-color: #f3e8ff; color: #6b21a8; }
-        .platform-remotar { background-color: #ccfbf1; color: #115e59; }
-        .platform-coodesh { background-color: #ffedd5; color: #9a3412; }
+        .platform-gupy { background-color: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+        .platform-linkedin { background-color: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .platform-solides { background-color: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .platform-remotar { background-color: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
+        .platform-coodesh { background-color: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
 
-        /* Estilo dos Textos e Botões */
+        /* Textos da Tabela */
         .vaga-title {
-            color: #0f172a;
+            color: #f1f5f9;
             font-size: 0.93rem;
             font-weight: 600;
             line-height: 1.35;
         }
         .vaga-company {
-            color: #475569;
+            color: #cbd5e1;
             font-size: 0.88rem;
             font-weight: 500;
         }
+
+        /* Botões de Ação */
         .btn-action-group .btn {
             padding: 0.35rem 0.65rem;
             font-size: 0.82rem;
             border-radius: 6px;
             font-weight: 500;
+        }
+        .btn-outline-secondary {
+            color: #94a3b8;
+            border-color: #475569;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #334155;
+            color: #f8fafc;
+        }
+        .btn-outline-danger {
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        .btn-outline-danger:hover {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-outline-success {
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        .btn-outline-success:hover {
+            background-color: #16a34a;
+            color: white;
         }
     </style>
 </head>
@@ -216,21 +245,21 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-5">
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
-                            <i class="bi bi-search"></i>
+                        <span class="input-group-text border-end-0" style="border-radius: 8px 0 0 8px;">
+                            <i class="bi bi-search text-muted"></i>
                         </span>
                         <input type="text" id="searchInput" class="form-control border-start-0" style="border-radius: 0 8px 8px 0;" placeholder="Buscar cargo ou empresa...">
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <select id="filterScore" class="form-select">
+                    <select id="filterScore" class="form-select" style="border-radius: 8px;">
                         <option value="all">🎯 Todas as Relevâncias</option>
                         <option value="high">🔥 Alta Relevância (≥ 70%)</option>
                         <option value="medium">🟡 Média Relevância (40% - 69%)</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select id="filterStatus" class="form-select">
+                    <select id="filterStatus" class="form-select" style="border-radius: 8px;">
                         <option value="all">📋 Todos os Status</option>
                         <option value="pending">⏳ Pendentes</option>
                         <option value="applied">✅ Candidatado</option>
@@ -290,7 +319,7 @@
             if (detalhes.length > 0 && detalhes[0].data) {
                 const parts = detalhes[0].data.split(' ');
                 if (parts.length === 2) {
-                    document.getElementById('stat-date').innerHTML = `${parts[0]}<br><span style="font-size: 0.85rem; color: #94a3b8; font-weight: 500;">${parts[1]}</span>`;
+                    document.getElementById('stat-date').innerHTML = `${parts[0]}<br><span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">${parts[1]}</span>`;
                 } else {
                     document.getElementById('stat-date').innerText = detalhes[0].data;
                 }
@@ -339,7 +368,7 @@
                 const isApplied = currentStatus === 'applied';
 
                 const tr = document.createElement('tr');
-                if (isApplied) tr.style.opacity = '0.65';
+                if (isApplied) tr.style.opacity = '0.5';
 
                 tr.innerHTML = `
                     <td>
