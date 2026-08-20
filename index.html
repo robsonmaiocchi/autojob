@@ -9,9 +9,11 @@
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .header-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
         .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); border-radius: 10px; }
+        .stat-card { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 110px; }
         .badge-high { background-color: #28a745; }
         .badge-medium { background-color: #ffc107; color: #212529; }
         .badge-low { background-color: #6c757d; }
+        .btn-candidatar { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -24,29 +26,29 @@
     </div>
 
     <div class="container mb-5">
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4 align-items-stretch">
             <div class="col-md-3">
-                <div class="card p-3 text-center">
-                    <h6 class="text-muted">Total de Vagas</h6>
-                    <h2 id="stat-total" class="fw-bold text-primary">0</h2>
+                <div class="card p-3 text-center h-100 stat-card">
+                    <h6 class="text-muted mb-2">Total de Vagas</h6>
+                    <h2 id="stat-total" class="fw-bold text-primary mb-0">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center">
-                    <h6 class="text-muted">Alta Relevância</h6>
-                    <h2 id="stat-high" class="fw-bold text-success">0</h2>
+                <div class="card p-3 text-center h-100 stat-card">
+                    <h6 class="text-muted mb-2">Alta Relevância</h6>
+                    <h2 id="stat-high" class="fw-bold text-success mb-0">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center">
-                    <h6 class="text-muted">Média Relevância</h6>
-                    <h2 id="stat-medium" class="fw-bold text-warning">0</h2>
+                <div class="card p-3 text-center h-100 stat-card">
+                    <h6 class="text-muted mb-2">Média Relevância</h6>
+                    <h2 id="stat-medium" class="fw-bold text-warning mb-0">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center">
-                    <h6 class="text-muted">Última Atualização</h6>
-                    <h6 id="stat-date" class="fw-bold text-secondary mt-2">-</h6>
+                <div class="card p-3 text-center h-100 stat-card">
+                    <h6 class="text-muted mb-2">Última Atualização</h6>
+                    <div id="stat-date" class="fw-bold text-secondary fs-5 mb-0">-</div>
                 </div>
             </div>
         </div>
@@ -72,9 +74,9 @@
                             <th>Título</th>
                             <th>Empresa</th>
                             <th>Plataforma</th>
-                            <th>Match Score</th>
+                            <th class="text-center">Match Score</th>
                             <th>Data</th>
-                            <th>Ação</th>
+                            <th class="text-center">Ação</th>
                         </tr>
                     </thead>
                     <tbody id="vagasTable">
@@ -128,9 +130,9 @@
                     <td class="fw-semibold">${v.titulo}</td>
                     <td>${v.empresa}</td>
                     <td><span class="badge bg-light text-dark border">${v.plataforma}</span></td>
-                    <td><span class="badge ${badgeClass}">${score}%</span></td>
+                    <td class="text-center"><span class="badge ${badgeClass}">${score}%</span></td>
                     <td class="text-muted small">${v.data || 'N/A'}</td>
-                    <td><a href="${v.link}" target="_blank" class="btn btn-sm btn-outline-primary">Candidatar-se</a></td>
+                    <td class="text-center"><a href="${v.link}" target="_blank" class="btn btn-sm btn-outline-primary btn-candidatar">Candidatar-se</a></td>
                 `;
                 tbody.appendChild(tr);
             });
