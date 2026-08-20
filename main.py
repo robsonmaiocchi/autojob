@@ -145,8 +145,11 @@ def buscar_gupy(termos, locais, termos_excluir):
         print(f"  └ Buscando termo Gupy: {termo}", flush=True)
         params = {"jobName": termo, "limit": 20, "offset": 0}
         res = fetch_url(base_url, params=params, referer="https://portal.gupy.io/")
-        if not res:
+        
+        if not res or not res.text.strip().startswith("{"):
+            print("  ⚠️ Gupy retornou bloqueio/HTML (Cloudflare). Pulando termo.", flush=True)
             continue
+            
         try:
             data = res.json()
             for item in data.get("data", []):
@@ -169,32 +172,28 @@ def buscar_gupy(termos, locais, termos_excluir):
 
 def buscar_solides(termos, locais, termos_excluir):
     vagas = []
-    base_url = "https://vagas.solides.com.br/api/v1/jobs/search"
     for termo in termos:
         print(f"  └ Buscando termo Sólides: {termo}", flush=True)
-        params = {"title": termo, "take": 20, "page": 1}
-        res = fetch_url(base_url, params=params, referer="https://vagas.solides.com.br/")
+        termo_encoded = urllib.parse.quote(termo)
+        url = f"https://vagas.solides.com.br/?busca={termo_encoded}"
+        res = fetch_url(url, referer="https://vagas.solides.com.br/")
         if not res:
             continue
         try:
-            data = res.json()
-            items = data.get("data", []) if isinstance(data, dict) else []
-            for item in items:
-                titulo = item.get("title") or item.get("name", "")
-                if deve_excluir(titulo, termos_excluir):
-                    continue
-                empresa = item.get("company", {}).get("name", "Sólides") if isinstance(item.get("company"), dict) else "Sólides"
-                link = item.get("link") or item.get("url", "")
-                if link and not link.startswith("http"):
-                    link = f"https://vagas.solides.com.br{link}"
-                local = item.get("city", {}).get("name", "Brasil") if isinstance(item.get("city"), dict) else "Brasil"
-                vagas.append({
-                    "titulo": titulo,
-                    "empresa": empresa,
-                    "local": local,
-                    "link": link,
-                    "plataforma": "Sólides"
-                })
+            soup = BeautifulSoup(res.text, "html.parser")
+            cards = soup.find_all("a", href=re.compile(r"/vaga/"))
+            for card in cards:
+                titulo = card.get_text(strip=True)
+                if titulo and not deve_excluir(titulo, termos_excluir):
+                    href = card.get("href", "")
+                    link = f"https://vagas.solides.com.br{href}" if href.startswith("/") else href
+                    vagas.append({
+                        "titulo": titulo,
+                        "empresa": "Sólides",
+                        "local": "Brasil",
+                        "link": link,
+                        "plataforma": "Sólides"
+                    })
         except Exception as e:
             print(f"⚠️ Erro no parsing Sólides: {e}", flush=True)
     return vagas
