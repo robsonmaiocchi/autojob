@@ -49,7 +49,7 @@ def fetch_url(url, method="GET", json_data=None, params=None, timeout=5, referer
         return None
 
 # ==============================================================================
-# ALGORITMO DE PONTUAÇÃO DE RELEVÂNCIA (MATCH SCORE)
+# ALGORITMO DE PONTUAÇÃO DE RELEVÂNCIA (MATCH SCORE) E RESUMO
 # ==============================================================================
 PALAVRAS_CHAVE_PESO = {
     "saas": 20, "sql": 20, "helpdesk": 20, "sla": 15, "itsm": 15,
@@ -70,6 +70,26 @@ def calcular_match_score(titulo, empresa, local):
         badge = "⚪ Compatível (General Match)"
 
     return score, badge
+
+def extrair_resumo_vaga(vaga, max_caracteres=220):
+    """Gera um resumo formatado para exibição nos Hover Cards do Dashboard."""
+    local = vaga.get('local', 'Brasil')
+    plat = vaga.get('plataforma', 'Web')
+    titulo = vaga.get('titulo', '')
+    empresa = vaga.get('empresa', '')
+
+    resumo = f"Oportunidade para {titulo} na empresa {empresa}. Localização registrada: {local} ({plat})."
+    
+    # Se houver descrição estendida capturada no scraper
+    if "descricao_bruta" in vaga and vaga["descricao_bruta"]:
+        limpo = re.sub(r'<[^>]+>', '', vaga["descricao_bruta"])
+        limpo = re.sub(r'\s+', ' ', limpo).strip()
+        if len(limpo) > max_caracteres:
+            resumo = limpo[:max_caracteres].rsplit(' ', 1)[0] + '...'
+        else:
+            resumo = limpo
+
+    return resumo
 
 # ==============================================================================
 # UTILITÁRIOS E HISTÓRICO
@@ -340,6 +360,7 @@ def main():
             plat_counts[plat] = plat_counts.get(plat, 0) + 1
 
             score, badge = calcular_match_score(vaga["titulo"], vaga["empresa"], vaga["local"])
+            resumo = extrair_resumo_vaga(vaga)
 
             if score >= 70:
                 high_match_count += 1
@@ -360,17 +381,20 @@ def main():
             send_telegram(msg, vaga["link"])
             time.sleep(0.5)
 
+            # Insere no topo com o campo "resumo" para o Hover Card
             detalhes_recentes.insert(0, {
                 "titulo": vaga["titulo"],
                 "empresa": vaga["empresa"],
                 "plataforma": vaga["plataforma"],
                 "link": vaga["link"],
                 "score": score,
+                "resumo": resumo,
                 "data": datetime.now().strftime("%Y-%m-%d %H:%M")
             })
 
     history["hashes"] = list(hashes_existentes)
-    history["detalhes"] = detalhes_recentes[:50]
+    # Mantém um histórico estendido de até 100 itens para alimentar bem os gráficos
+    history["detalhes"] = detalhes_recentes[:100]
     
     save_history(history)
 
