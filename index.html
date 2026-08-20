@@ -24,7 +24,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-primary); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
-        /* ================= SIDEBAR (RAIL / DOCK STYLE) ================= */
+        /* ================= SIDEBAR ================= */
         .sidebar {
             width: var(--sidebar-expanded-width);
             background: var(--bg-card);
@@ -123,11 +123,27 @@
             transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
         .header-title h1 { font-size: 1.6rem; font-weight: 700; color: var(--text-main); }
         .header-title p { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
 
-        .btn-export { background: var(--accent-blue); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .header-actions { display: flex; gap: 10px; }
+
+        .btn-header { 
+            border: none; 
+            padding: 10px 18px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .btn-scan { background: var(--accent-green); color: white; }
+        .btn-scan:hover { opacity: 0.9; }
+        .btn-export { background: var(--accent-blue); color: white; }
         .btn-export:hover { opacity: 0.9; }
 
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -138,7 +154,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* PAINEL DE CONFIGURAÇÕES / FILTROS NO MENU */
         .settings-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -170,7 +185,7 @@
 
         .table-container { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { background: rgba(0,0,0,0.2); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
         tr:hover { background: var(--bg-hover); }
 
@@ -183,10 +198,31 @@
         .med-score { color: var(--accent-yellow); }
         .low-score { color: var(--text-muted); }
 
-        .btn-action { padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; }
-        .btn-ver { background: var(--accent-blue); color: white; margin-right: 6px; }
-        .btn-candidatado { background: var(--bg-hover); color: var(--text-muted); }
-        .btn-candidatado.done { background: var(--accent-green); color: white; }
+        /* AJUSTE DAS AÇÕES NA TABELA (SEM OVERLAP) */
+        .actions-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-action { 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            text-decoration: none; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
+            border: none; 
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-ver { background: var(--accent-blue); color: white; }
+        .btn-ver:hover { opacity: 0.9; }
+        .btn-candidatado { background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border-color); }
+        .btn-candidatado.done { background: var(--accent-green); color: white; border-color: var(--accent-green); }
 
         .title-cell { position: relative; cursor: pointer; }
         .hover-card { display: none; position: absolute; left: 10px; top: 100%; z-index: 100; background: #0f172a; border: 1px solid var(--accent-blue); padding: 12px; border-radius: 8px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 0.8rem; line-height: 1.4; color: var(--text-main); pointer-events: none; }
@@ -235,7 +271,10 @@
                 <h1 id="page-title">AutoJob Dashboard</h1>
                 <p id="page-subtitle">Painel Inteligente de Monitoramento e Oportunidades</p>
             </div>
-            <button class="btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+            <div class="header-actions">
+                <button class="btn-header btn-scan" onclick="executarVarredura()">🔍 Varredura Manual</button>
+                <button class="btn-header btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+            </div>
         </header>
 
         <div class="metrics-grid">
@@ -345,7 +384,7 @@
                     </select>
                 </div>
 
-                <button class="btn-export" onclick="salvarConfiguracoes()">💾 Salvar Preferências</button>
+                <button class="btn-header btn-export" onclick="salvarConfiguracoes()">💾 Salvar Preferências</button>
             </div>
         </section>
     </main>
@@ -406,6 +445,10 @@
 
             localStorage.setItem('autojob_config', JSON.stringify({ keywords, minScore, defaultPlat }));
             alert('Preferências salvas com sucesso!');
+        }
+
+        function executarVarredura() {
+            alert('A varredura manual é disparada via GitHub Actions ou localmente executando o script main.py!');
         }
 
         function getVagaKey(vaga) {
@@ -572,10 +615,12 @@
                         <td><span class="badge-score ${scoreClass}">${score}%</span></td>
                         <td><small style="color: var(--text-muted);">${v.data || 'N/A'}</small></td>
                         <td>
-                            <a href="${v.link}" target="_blank" class="btn-action btn-ver">🚀 Ver Vaga</a>
-                            <button class="btn-action btn-candidatado ${isApplied ? 'done' : ''}" onclick="toggleApplied('${key}')">
-                                ${isApplied ? '✓ Candidatado' : 'Marcar'}
-                            </button>
+                            <div class="actions-cell">
+                                <a href="${v.link}" target="_blank" class="btn-action btn-ver">🚀 Ver Vaga</a>
+                                <button class="btn-action btn-candidatado ${isApplied ? 'done' : ''}" onclick="toggleApplied('${key}')">
+                                    ${isApplied ? '✓ Candidatado' : 'Marcar'}
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
