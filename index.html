@@ -4,73 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoJob - Dashboard de Vagas</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
     <style>
+        :root {
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --border-color: #e2e8f0;
+        }
+
         body { 
-            background-color: #f4f6f9; 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            color: #333;
+            background-color: var(--bg-body); 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
         }
+
+        /* Header Moderno */
         .header-bg { 
-            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
             color: white; 
-            padding: 2.5rem 0; 
+            padding: 2.2rem 0; 
             margin-bottom: 2rem; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .card { 
-            border: none; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            border-radius: 12px; 
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
+
+        /* Cards de Métricas */
         .stat-card { 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 110px; 
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        
-        /* Badges em Pílulas */
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .stat-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+        }
+
+        /* Main Container Card */
+        .main-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            padding: 1.5rem;
+        }
+
+        /* Filtros */
+        .form-control, .form-select {
+            border-color: var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 0.6rem 1rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Design Elegante de Tabela */
+        .custom-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            margin-top: -8px;
+        }
+        .custom-table thead th {
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 1rem;
+        }
+        .custom-table tbody tr {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .custom-table tbody tr:hover {
+            background-color: #f8fafc;
+            transform: scale(1.002);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .custom-table td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .custom-table td:first-child {
+            border-left: 1px solid var(--border-color);
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+        .custom-table td:last-child {
+            border-right: 1px solid var(--border-color);
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        /* Pílulas de Badges */
         .pill-badge {
             border-radius: 50rem;
-            padding: 0.35em 0.8em;
-            font-size: 0.80rem;
+            padding: 0.3em 0.75em;
+            font-size: 0.78rem;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
-        .badge-high { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .badge-medium { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .badge-low { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
+        .badge-high { background-color: #dcfce7; color: #166534; }
+        .badge-medium { background-color: #fef9c3; color: #854d0e; }
+        .badge-low { background-color: #f1f5f9; color: #475569; }
 
-        .platform-gupy { background-color: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
-        .platform-linkedin { background-color: #e8f4f9; color: #0077b5; border: 1px solid #b3e5fc; }
-        .platform-solides { background-color: #f3e5f5; color: #4a148c; border: 1px solid #e1bee7; }
-        .platform-remotar { background-color: #e0f2f1; color: #004d40; border: 1px solid #b2dfdb; }
-        .platform-coodesh { background-color: #fff8e1; color: #ff6f00; border: 1px solid #ffe082; }
+        .platform-gupy { background-color: #e0f2fe; color: #0369a1; }
+        .platform-linkedin { background-color: #e0e7ff; color: #3730a3; }
+        .platform-solides { background-color: #f3e8ff; color: #6b21a8; }
+        .platform-remotar { background-color: #ccfbf1; color: #115e59; }
+        .platform-coodesh { background-color: #ffedd5; color: #9a3412; }
 
-        /* Tabela e Linhas */
-        .table { vertical-align: middle; }
-        .row-high-score { background-color: rgba(40, 167, 69, 0.02); }
-        .row-applied { opacity: 0.6; background-color: rgba(0, 0, 0, 0.02); }
-        .row-dismissed { display: none; }
-
-        .btn-action {
-            border-radius: 50rem;
-            font-size: 0.85rem;
-            padding: 0.3rem 0.8rem;
-            white-space: nowrap;
+        /* Estilo das Ações */
+        .btn-action-group .btn {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.82rem;
+            border-radius: 6px;
+            font-weight: 500;
         }
-
-        .search-box {
-            border-radius: 50rem;
-            padding-left: 1.2rem;
+        .vaga-title {
+            color: #1e293b;
+            font-size: 0.95rem;
+            line-height: 1.3;
+        }
+        .vaga-company {
+            color: #64748b;
+            font-size: 0.88rem;
         }
     </style>
 </head>
@@ -78,8 +178,8 @@
 
     <div class="header-bg">
         <div class="container text-center">
-            <h1 class="fw-bold mb-1">🚀 AutoJob Dashboard</h1>
-            <p class="lead mb-0 text-white-50">Monitoramento e Gestão Inteligente de Vagas</p>
+            <h2 class="fw-bold mb-1">🚀 AutoJob Dashboard</h2>
+            <p class="text-white-50 mb-0 small">Painel Inteligente de Monitoramento e Oportunidades</p>
         </div>
     </div>
 
@@ -87,74 +187,73 @@
         <!-- Cards de Métricas -->
         <div class="row g-3 mb-4 align-items-stretch">
             <div class="col-md-3">
-                <div class="card p-3 text-center h-100 stat-card">
-                    <span class="text-muted small fw-semibold text-uppercase">Total Monitorado</span>
-                    <h2 id="stat-total" class="fw-bold text-primary mb-0 mt-1">0</h2>
+                <div class="stat-card">
+                    <span class="stat-title">Total Capturado</span>
+                    <div id="stat-total" class="stat-value text-primary">0</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center h-100 stat-card">
-                    <span class="text-muted small fw-semibold text-uppercase">Alta Relevância</span>
-                    <h2 id="stat-high" class="fw-bold text-success mb-0 mt-1">0</h2>
+                <div class="stat-card">
+                    <span class="stat-title">Alta Relevância</span>
+                    <div id="stat-high" class="stat-value text-success">0</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center h-100 stat-card">
-                    <span class="text-muted small fw-semibold text-uppercase">Candidatado</span>
-                    <h2 id="stat-applied" class="fw-bold text-info mb-0 mt-1">0</h2>
+                <div class="stat-card">
+                    <span class="stat-title">Candidatado</span>
+                    <div id="stat-applied" class="stat-value text-info">0</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card p-3 text-center h-100 stat-card">
-                    <span class="text-muted small fw-semibold text-uppercase">Última Execução</span>
-                    <div id="stat-date" class="fw-bold text-secondary fs-6 mb-0 mt-2">-</div>
+                <div class="stat-card">
+                    <span class="stat-title">Última Atualização</span>
+                    <div id="stat-date" class="stat-value text-secondary fs-6 mt-2">-</div>
                 </div>
             </div>
         </div>
 
-        <!-- Filtros e Busca -->
-        <div class="card p-4">
-            <div class="row g-3 mb-3">
+        <!-- Painel Principal de Filtros e Vagas -->
+        <div class="main-card">
+            <div class="row g-3 mb-4">
                 <div class="col-md-5">
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 rounded-start-pill text-muted">
+                        <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 8px 0 0 8px;">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" id="searchInput" class="form-control border-start-0 rounded-end-pill search-box ps-0" placeholder="Buscar por cargo ou empresa...">
+                        <input type="text" id="searchInput" class="form-control border-start-0" style="border-radius: 0 8px 8px 0;" placeholder="Buscar cargo ou empresa...">
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <select id="filterScore" class="form-select rounded-pill">
+                    <select id="filterScore" class="form-select">
                         <option value="all">🎯 Todas as Relevâncias</option>
                         <option value="high">🔥 Alta Relevância (≥ 70%)</option>
                         <option value="medium">🟡 Média Relevância (40% - 69%)</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select id="filterStatus" class="form-select rounded-pill">
+                    <select id="filterStatus" class="form-select">
                         <option value="all">📋 Todos os Status</option>
-                        <option value="pending">⏳ Pendentes de Candidatura</option>
+                        <option value="pending">⏳ Pendentes</option>
                         <option value="applied">✅ Candidatado</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Tabela de Vagas -->
+            <!-- Tabela Estilizada -->
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table class="custom-table">
+                    <thead>
                         <tr>
-                            <th>Título do Cargo</th>
-                            <th>Empresa</th>
-                            <th>Plataforma</th>
-                            <th class="text-center">Match Score</th>
-                            <th>Capturado em</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center">Ações</th>
+                            <th style="width: 30%;">Título do Cargo</th>
+                            <th style="width: 18%;">Empresa</th>
+                            <th style="width: 12%;">Plataforma</th>
+                            <th class="text-center" style="width: 12%;">Match Score</th>
+                            <th style="width: 13%;">Capturado</th>
+                            <th class="text-center" style="width: 15%;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="vagasTable">
-                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin"></i> Carregando histórico...</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-arrow-repeat spin"></i> Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -174,7 +273,7 @@
                 updateStats(vagasData, data.hashes ? data.hashes.length : 0);
                 renderTable(vagasData);
             } catch (err) {
-                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar o histórico de vagas.</td></tr>';
+                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-5"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar o histórico de vagas.</td></tr>';
             }
         }
 
@@ -194,7 +293,7 @@
 
         function getPlatformBadge(plat) {
             const name = (plat || '').toLowerCase();
-            let cssClass = 'bg-light text-dark border';
+            let cssClass = 'badge-low';
             
             if (name.includes('gupy')) cssClass = 'platform-gupy';
             else if (name.includes('linkedin')) cssClass = 'platform-linkedin';
@@ -210,7 +309,7 @@
             tbody.innerHTML = '';
 
             if (vagas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Nenhuma vaga encontrada para os filtros selecionados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Nenhuma vaga encontrada para os filtros aplicados.</td></tr>';
                 return;
             }
 
@@ -228,33 +327,31 @@
                     scoreBadge = '<span class="pill-badge badge-medium"><i class="bi bi-star"></i> ' + score + '%</span>';
                 }
 
-                let rowClass = score >= 70 ? 'row-high-score' : '';
-                if (currentStatus === 'applied') rowClass += ' row-applied';
+                const isApplied = currentStatus === 'applied';
 
                 const tr = document.createElement('tr');
-                tr.className = rowClass;
+                if (isApplied) tr.style.opacity = '0.65';
+
                 tr.innerHTML = `
-                    <td class="fw-semibold text-dark">${v.titulo}</td>
-                    <td class="text-secondary">${v.empresa}</td>
+                    <td>
+                        <div class="fw-bold vaga-title">${v.titulo}</div>
+                        ${isApplied ? '<span class="badge bg-info text-dark mt-1" style="font-size:0.7rem;">Candidatado</span>' : ''}
+                    </td>
+                    <td><span class="vaga-company">${v.empresa}</span></td>
                     <td>${getPlatformBadge(v.plataforma)}</td>
                     <td class="text-center">${scoreBadge}</td>
                     <td class="text-muted small">${v.data || 'N/A'}</td>
                     <td class="text-center">
-                        ${currentStatus === 'applied' 
-                            ? '<span class="pill-badge bg-info text-dark"><i class="bi bi-check-circle-fill"></i> Candidatado</span>' 
-                            : '<span class="pill-badge bg-light text-muted border">Pendente</span>'}
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <a href="${v.link}" target="_blank" class="btn btn-primary btn-action" title="Abrir Link">
+                        <div class="btn-group btn-action-group" role="group">
+                            <a href="${v.link}" target="_blank" class="btn btn-primary" title="Abrir vaga">
                                 <i class="bi bi-box-arrow-up-right"></i> Ver
                             </a>
-                            <button onclick="toggleStatus('${key}', '${currentStatus === 'applied' ? 'pending' : 'applied'}')" 
-                                    class="btn ${currentStatus === 'applied' ? 'btn-outline-secondary' : 'btn-outline-success'} btn-action" 
-                                    title="${currentStatus === 'applied' ? 'Marcar como Pendente' : 'Marcar como Candidatado'}">
-                                <i class="bi ${currentStatus === 'applied' ? 'bi-arrow-counterclockwise' : 'bi-check-lg'}"></i>
+                            <button onclick="toggleStatus('${key}', '${isApplied ? 'pending' : 'applied'}')" 
+                                    class="btn ${isApplied ? 'btn-outline-secondary' : 'btn-outline-success'}" 
+                                    title="${isApplied ? 'Desfazer candidatura' : 'Marcar como candidatado'}">
+                                <i class="bi ${isApplied ? 'bi-arrow-counterclockwise' : 'bi-check-lg'}"></i>
                             </button>
-                            <button onclick="dismissVaga('${key}')" class="btn btn-outline-danger btn-action" title="Ocultar Vaga">
+                            <button onclick="dismissVaga('${key}')" class="btn btn-outline-danger" title="Ocultar vaga">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -272,7 +369,7 @@
         }
 
         function dismissVaga(key) {
-            if (confirm("Deseja ocultar esta vaga da sua visualização?")) {
+            if (confirm("Ocultar esta vaga da sua lista?")) {
                 statusMap[key] = 'dismissed';
                 localStorage.setItem('autojob_status', JSON.stringify(statusMap));
                 filterData();
