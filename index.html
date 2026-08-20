@@ -1,368 +1,163 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel AutoJob - Configurações & Métricas</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoJob - Dashboard de Vagas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
+        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); border-radius: 10px; }
+        .badge-high { background-color: #28a745; }
+        .badge-medium { background-color: #ffc107; color: #212529; }
+        .badge-low { background-color: #6c757d; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-6 flex justify-center">
-  <div class="max-w-3xl w-full bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700">
-    <h1 class="text-2xl font-bold mb-6 text-indigo-400 flex items-center gap-2">
-      ⚙️ Gerenciador & Dashboard do AutoJob
-    </h1>
+<body>
 
-    <!-- Dashboard Cards -->
-    <div class="grid grid-cols-3 gap-4 mb-6">
-      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
-        <span class="text-xs text-slate-400 font-semibold block uppercase">Total no Histórico</span>
-        <span id="metricTotal" class="text-2xl font-bold text-indigo-400">0</span>
-      </div>
-      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
-        <span class="text-xs text-slate-400 font-semibold block uppercase">Últimas Rastreadas</span>
-        <span id="metricRecentes" class="text-2xl font-bold text-emerald-400">0</span>
-      </div>
-      <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 text-center">
-        <span class="text-xs text-slate-400 font-semibold block uppercase">Plataformas Ativas</span>
-        <span id="metricPlataformas" class="text-2xl font-bold text-amber-400">6/6</span>
-      </div>
+    <div class="header-bg text-center">
+        <div class="container">
+            <h1 class="fw-bold">🚀 AutoJob Dashboard</h1>
+            <p class="lead mb-0">Painel Inteligente de Monitoramento de Vagas</p>
+        </div>
     </div>
 
-    <!-- Token GitHub -->
-    <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">GitHub Personal Access Token (PAT):</label>
-      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
-    </div>
-
-    <!-- Plataformas -->
-    <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">Plataformas Ativas:</label>
-      <div class="grid grid-cols-2 gap-4 bg-slate-700 p-3 rounded border border-slate-600">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platGupy" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Gupy (API/Scraper)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platSolides" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Sólides (API)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platLinkedin" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>LinkedIn (Scraper)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platIndeed" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Indeed (Scraper)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platRemotar" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Remotar (Scraper)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="platCoodesh" onchange="atualizarMetricaPlataformas()" class="w-4 h-4 text-indigo-600 rounded" checked>
-          <span>Coodesh (API)</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Termos de Busca -->
-    <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">Termos de Busca (separados por vírgula):</label>
-      <textarea id="termosBusca" rows="3" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500"></textarea>
-    </div>
-
-    <!-- Locais -->
-    <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">Locais / Modalidades (separados por vírgula):</label>
-      <input type="text" id="locais" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
-    </div>
-
-    <!-- Exclusões -->
-    <div class="mb-6">
-      <label class="block text-sm font-medium mb-2 text-slate-300">Palavras para Excluir do Título:</label>
-      <input type="text" id="termosExcluir" class="w-full p-2.5 rounded bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-indigo-500">
-    </div>
-
-    <!-- Botões Principais -->
-    <div class="flex gap-4 mb-6">
-      <button onclick="carregarConfig()" class="w-1/2 py-2.5 bg-slate-600 hover:bg-slate-500 rounded font-semibold transition">Carregar do GitHub</button>
-      <button onclick="salvarConfig()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded font-semibold transition">Salvar no GitHub</button>
-    </div>
-
-    <!-- Lista de Vagas Encontradas Recentemente -->
-    <div class="mb-6 border-t border-slate-700 pt-6">
-      <h2 class="text-lg font-bold text-indigo-300 mb-3">📋 Últimas Vagas Processadas</h2>
-      <div id="listaVagas" class="space-y-2 max-h-48 overflow-y-auto pr-2">
-        <p class="text-xs text-slate-400 italic">Carregando histórico do repositório...</p>
-      </div>
-    </div>
-
-    <!-- Disparar Action Manual -->
-    <div class="pt-4 border-t border-slate-700 flex justify-between items-center">
-      <span class="text-sm text-slate-400">Quer buscar vagas agora?</span>
-      <button onclick="dispararVarredura()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-semibold text-sm transition flex items-center gap-1">
-        🚀 Executar Varredura Agora
-      </button>
-    </div>
-
-    <div id="status" class="mt-4 text-center font-medium"></div>
-  </div>
-
-  <script>
-    const REPO = "robsonmaiocchi/autojob";
-    const FILE_PATH = "config.json";
-    const HISTORY_PATH = "history.json";
-
-    const DEFAULT_CONFIG = {
-      termos_busca: [
-        "Analista de Suporte Tecnico",
-        "Suporte SaaS",
-        "Suporte Tecnico",
-        "Technical Support Analyst",
-        "Analista de Suporte Junior",
-        "Analista de Suporte Pleno"
-      ],
-      locais: [
-        "Remoto",
-        "Imbituba",
-        "Tubarão",
-        "Joinville",
-        "Curitiba"
-      ],
-      termos_excluir: [
-        "Estágio",
-        "Intern",
-        "Sênior",
-        "Senior",
-        "Lead",
-        "Coordenador",
-        "Gerente",
-        "Manager",
-        "Especialista"
-      ],
-      plataformas: { gupy: true, solides: true, linkedin: true, indeed: true, remotar: true, coodesh: true }
-    };
-
-    function atualizarMetricaPlataformas() {
-      const gupy = document.getElementById("platGupy").checked ? 1 : 0;
-      const solides = document.getElementById("platSolides").checked ? 1 : 0;
-      const linkedin = document.getElementById("platLinkedin").checked ? 1 : 0;
-      const indeed = document.getElementById("platIndeed").checked ? 1 : 0;
-      const remotar = document.getElementById("platRemotar").checked ? 1 : 0;
-      const coodesh = document.getElementById("platCoodesh").checked ? 1 : 0;
-      
-      const total = gupy + solides + linkedin + indeed + remotar + coodesh;
-      document.getElementById("metricPlataformas").innerText = `${total}/6`;
-    }
-
-    function preencherFormulario(config) {
-      document.getElementById("termosBusca").value = config.termos_busca.join(", ");
-      document.getElementById("locais").value = config.locais.join(", ");
-      document.getElementById("termosExcluir").value = (config.termos_excluir || []).join(", ");
-      
-      const plats = config.plataformas || { gupy: true, solides: true, linkedin: true, indeed: true, remotar: true, coodesh: true };
-      document.getElementById("platGupy").checked = plats.gupy !== false;
-      document.getElementById("platSolides").checked = plats.solides !== false;
-      document.getElementById("platLinkedin").checked = plats.linkedin !== false;
-      document.getElementById("platIndeed").checked = plats.indeed !== false;
-      document.getElementById("platRemotar").checked = plats.remotar !== false;
-      document.getElementById("platCoodesh").checked = plats.coodesh !== false;
-      
-      atualizarMetricaPlataformas();
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      preencherFormulario(DEFAULT_CONFIG);
-
-      const savedToken = localStorage.getItem("autojob_pat");
-      if (savedToken) {
-        document.getElementById("ghToken").value = savedToken;
-        carregarConfig();
-      }
-      carregarHistorico();
-    });
-
-    function base64ToUtf8(str) {
-      const bytes = Uint8Array.from(atob(str), c => c.charCodeAt(0));
-      return new TextDecoder().decode(bytes);
-    }
-
-    function utf8ToBase64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let binary = "";
-      bytes.forEach(b => binary += String.fromCharCode(b));
-      return btoa(binary);
-    }
-
-    async function carregarHistorico() {
-      try {
-        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${HISTORY_PATH}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const jsonText = base64ToUtf8(data.content.replace(/\n/g, ''));
-        const historyData = JSON.parse(jsonText);
-
-        let total = 0;
-        let detalhes = [];
-
-        if (Array.isArray(historyData)) {
-          total = historyData.length;
-        } else if (typeof historyData === "object") {
-          total = (historyData.ids || historyData.hashes || []).length;
-          detalhes = historyData.detalhes || [];
-        }
-
-        document.getElementById("metricTotal").innerText = total;
-        document.getElementById("metricRecentes").innerText = detalhes.length;
-
-        const container = document.getElementById("listaVagas");
-        if (detalhes.length === 0) {
-          container.innerHTML = `<p class="text-xs text-slate-400 italic">Nenhuma vaga processada recentemente.</p>`;
-          return;
-        }
-
-        container.innerHTML = detalhes.map(v => `
-          <div class="bg-slate-700/40 p-2.5 rounded border border-slate-600 flex justify-between items-center text-xs">
-            <div>
-              <span class="font-bold text-indigo-300">[${v.plataforma || 'Vaga'}]</span>
-              <span class="text-white ml-1">${v.titulo}</span>
+    <div class="container mb-5">
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card p-3 text-center">
+                    <h6 class="text-muted">Total de Vagas</h6>
+                    <h2 id="stat-total" class="fw-bold text-primary">0</h2>
+                </div>
             </div>
-            ${v.link ? `<a href="${v.link}" target="_blank" class="text-emerald-400 hover:underline">Abrir 🔗</a>` : ''}
-          </div>
-        `).join('');
+            <div class="col-md-3">
+                <div class="card p-3 text-center">
+                    <h6 class="text-muted">Alta Relevância</h6>
+                    <h2 id="stat-high" class="fw-bold text-success">0</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 text-center">
+                    <h6 class="text-muted">Média Relevância</h6>
+                    <h2 id="stat-medium" class="fw-bold text-warning">0</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 text-center">
+                    <h6 class="text-muted">Última Atualização</h6>
+                    <h6 id="stat-date" class="fw-bold text-secondary mt-2">-</h6>
+                </div>
+            </div>
+        </div>
 
-      } catch (err) {
-        console.error("Erro ao carregar histórico:", err);
-      }
-    }
+        <div class="card p-4">
+            <div class="row g-3 mb-3">
+                <div class="col-md-8">
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por título ou empresa...">
+                </div>
+                <div class="col-md-4">
+                    <select id="filterScore" class="form-select">
+                        <option value="all">Todas as relevâncias</option>
+                        <option value="high">🔥 Alta Relevância (≥ 70%)</option>
+                        <option value="medium">🟡 Média Relevância (40% - 69%)</option>
+                    </select>
+                </div>
+            </div>
 
-    async function obterShaAtual(token, path) {
-      const headers = token ? { "Authorization": `token ${token}` } : {};
-      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        return data.sha;
-      }
-      return null;
-    }
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Título</th>
+                            <th>Empresa</th>
+                            <th>Plataforma</th>
+                            <th>Match Score</th>
+                            <th>Data</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vagasTable">
+                        <tr><td colspan="6" class="text-center text-muted">Carregando histórico...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-    async function carregarConfig() {
-      const status = document.getElementById("status");
-      const token = document.getElementById("ghToken").value;
-      status.innerText = "Carregando do GitHub...";
-      try {
-        const headers = token ? { "Authorization": `token ${token}` } : {};
-        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, { headers });
-        if (!res.ok) throw new Error("Não foi possível carregar a configuração.");
+    <script>
+        let vagasData = [];
 
-        const data = await res.json();
-        const contentJson = base64ToUtf8(data.content.replace(/\n/g, ''));
-        const content = JSON.parse(contentJson);
-
-        preencherFormulario(content);
-        carregarHistorico();
-
-        status.innerText = "✅ Configuração e métricas carregadas com sucesso!";
-        status.className = "mt-4 text-center font-medium text-green-400";
-      } catch (err) {
-        status.innerText = "⚠️ Exibindo valores pré-definidos.";
-        status.className = "mt-4 text-center font-medium text-amber-400";
-      }
-    }
-
-    async function salvarConfig() {
-      const token = document.getElementById("ghToken").value;
-      const status = document.getElementById("status");
-
-      if (!token) {
-        alert("Insira seu GitHub Personal Access Token!");
-        return;
-      }
-
-      localStorage.setItem("autojob_pat", token);
-      status.innerText = "Obtendo SHA e salvando no GitHub...";
-
-      try {
-        const currentSha = await obterShaAtual(token, FILE_PATH);
-        if (!currentSha) throw new Error("Erro ao obter versão do arquivo.");
-
-        const newConfig = {
-          termos_busca: document.getElementById("termosBusca").value.split(",").map(s => s.trim()).filter(Boolean),
-          locais: document.getElementById("locais").value.split(",").map(s => s.trim()).filter(Boolean),
-          termos_excluir: document.getElementById("termosExcluir").value.split(",").map(s => s.trim()).filter(Boolean),
-          plataformas: {
-            gupy: document.getElementById("platGupy").checked,
-            solides: document.getElementById("platSolides").checked,
-            linkedin: document.getElementById("platLinkedin").checked,
-            indeed: document.getElementById("platIndeed").checked,
-            remotar: document.getElementById("platRemotar").checked,
-            coodesh: document.getElementById("platCoodesh").checked
-          }
-        };
-
-        const jsonString = JSON.stringify(newConfig, null, 2);
-        const contentBase64 = utf8ToBase64(jsonString);
-
-        const body = {
-          message: "chore: atualiza filtros e plataformas via painel web",
-          content: contentBase64,
-          sha: currentSha
-        };
-
-        const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (res.ok) {
-          status.innerText = "🚀 Filtros salvos com sucesso no GitHub!";
-          status.className = "mt-4 text-center font-medium text-green-400";
-        } else {
-          throw new Error(`Erro na API do GitHub (Status: ${res.status}).`);
+        async function loadDashboard() {
+            try {
+                const res = await fetch('history.json?t=' + new Date().getTime());
+                const data = await res.json();
+                vagasData = data.detalhes || [];
+                
+                updateStats(vagasData, data.hashes ? data.hashes.length : 0);
+                renderTable(vagasData);
+            } catch (err) {
+                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar o histórico de vagas.</td></tr>';
+            }
         }
-      } catch (err) {
-        status.innerText = `❌ ${err.message}`;
-        status.className = "mt-4 text-center font-medium text-red-400";
-      }
-    }
 
-    async function dispararVarredura() {
-      const token = document.getElementById("ghToken").value;
-      const status = document.getElementById("status");
-
-      if (!token) {
-        alert("Insira seu GitHub Personal Access Token!");
-        return;
-      }
-
-      status.innerText = "Solicitando execução da varredura...";
-
-      try {
-        const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/main.yml/dispatches`, {
-          method: "POST",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ ref: "main" })
-        });
-
-        if (res.status === 204) {
-          status.innerText = "⚡ Varredura iniciada! Aguarde as notificações no Telegram.";
-          status.className = "mt-4 text-center font-medium text-green-400";
-        } else {
-          throw new Error("Falha ao disparar. Verifique as permissões do Token.");
+        function updateStats(detalhes, totalHashes) {
+            document.getElementById('stat-total').innerText = totalHashes;
+            document.getElementById('stat-high').innerText = detalhes.filter(v => (v.score || 0) >= 70).length;
+            document.getElementById('stat-medium').innerText = detalhes.filter(v => (v.score || 0) >= 40 && (v.score || 0) < 70).length;
+            document.getElementById('stat-date').innerText = detalhes.length > 0 ? detalhes[0].data : 'N/A';
         }
-      } catch (err) {
-        status.innerText = `❌ ${err.message}`;
-        status.className = "mt-4 text-center font-medium text-red-400";
-      }
-    }
-  </script>
+
+        function renderTable(vagas) {
+            const tbody = document.getElementById('vagasTable');
+            tbody.innerHTML = '';
+
+            if (vagas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma vaga encontrada.</td></tr>';
+                return;
+            }
+
+            vagas.forEach(v => {
+                const score = v.score || 0;
+                let badgeClass = 'badge-low';
+                if (score >= 70) badgeClass = 'badge-high';
+                else if (score >= 40) badgeClass = 'badge-medium';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-semibold">${v.titulo}</td>
+                    <td>${v.empresa}</td>
+                    <td><span class="badge bg-light text-dark border">${v.plataforma}</span></td>
+                    <td><span class="badge ${badgeClass}">${score}%</span></td>
+                    <td class="text-muted small">${v.data || 'N/A'}</td>
+                    <td><a href="${v.link}" target="_blank" class="btn btn-sm btn-outline-primary">Candidatar-se</a></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', filterData);
+        document.getElementById('filterScore').addEventListener('change', filterData);
+
+        function filterData() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const scoreFilter = document.getElementById('filterScore').value;
+
+            const filtered = vagasData.filter(v => {
+                const matchesSearch = v.titulo.toLowerCase().includes(search) || v.empresa.toLowerCase().includes(search);
+                const score = v.score || 0;
+                let matchesScore = true;
+                
+                if (scoreFilter === 'high') matchesScore = score >= 70;
+                if (scoreFilter === 'medium') matchesScore = score >= 40 && score < 70;
+
+                return matchesSearch && matchesScore;
+            });
+
+            renderTable(filtered);
+        }
+
+        loadDashboard();
+    </script>
 </body>
 </html>

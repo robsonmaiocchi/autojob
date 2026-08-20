@@ -3,6 +3,12 @@ import json
 import requests
 from datetime import datetime
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 HISTORY_FILE = "history.json"
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -55,7 +61,6 @@ def cmd_vagas():
     history = load_history()
     detalhes = history.get("detalhes", [])
     
-    # Filtra as vagas mais recentes com score alto ou médio
     relevantes = [v for v in detalhes if v.get("score", 0) >= 40][:5]
     
     if not relevantes:
