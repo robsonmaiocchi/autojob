@@ -23,19 +23,13 @@ ua = UserAgent(fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 def get_headers(referer="https://www.google.com/"):
     return {
         "User-Agent": ua.random,
-        "Accept": "application/json, text/plain, */*",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
         "Referer": referer,
-        "Origin": referer.rstrip("/"),
-        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site"
+        "Cache-Control": "no-cache"
     }
 
-def fetch_url(url, method="GET", json_data=None, params=None, timeout=12, referer="https://www.google.com/"):
+def fetch_url(url, method="GET", json_data=None, params=None, timeout=5, referer="https://www.google.com/"):
     headers = get_headers(referer=referer)
     try:
         if method.upper() == "POST":
@@ -46,7 +40,7 @@ def fetch_url(url, method="GET", json_data=None, params=None, timeout=12, refere
         response.raise_for_status()
         return response
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ Falha na requisição para {url}: {e}")
+        print(f"⚠️ Falha ou timeout em {url}: {e}", flush=True)
         return None
 
 # ==============================================================================
@@ -113,7 +107,7 @@ def save_history(history):
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"❌ Erro ao salvar histórico: {e}")
+        print(f"❌ Erro ao salvar histórico: {e}", flush=True)
 
 def generate_hash(titulo, empresa, plataforma):
     text = f"{titulo.strip().lower()}_{empresa.strip().lower()}_{plataforma.strip().lower()}"
@@ -134,20 +128,21 @@ def send_telegram(mensagem, link_vaga=None):
         payload["reply_markup"] = {
             "inline_keyboard": [[{"text": "🚀 Candidatar-se Agora", "url": link_vaga}]]
         }
-    fetch_url(url, method="POST", json_data=payload)
+    fetch_url(url, method="POST", json_data=payload, timeout=5)
 
 def deve_excluir(titulo, termos_excluir):
     titulo_lower = titulo.lower()
     return any(termo.lower() in titulo_lower for termo in termos_excluir)
 
 # ==============================================================================
-# SCRAPERS CORRIGIDOS
+# SCRAPERS
 # ==============================================================================
 
 def buscar_gupy(termos, locais, termos_excluir):
     vagas = []
-    base_url = "https://portal.api.gupy.io/api/v1/jobs"
+    base_url = "https://portal.gupy.io/job-search/api/v1/jobs"
     for termo in termos:
+        print(f"  └ Buscando termo Gupy: {termo}", flush=True)
         params = {"jobName": termo, "limit": 20, "offset": 0}
         res = fetch_url(base_url, params=params, referer="https://portal.gupy.io/")
         if not res:
@@ -169,15 +164,16 @@ def buscar_gupy(termos, locais, termos_excluir):
                     "plataforma": "Gupy"
                 })
         except Exception as e:
-            print(f"⚠️ Erro no parsing Gupy: {e}")
+            print(f"⚠️ Erro no parsing Gupy: {e}", flush=True)
     return vagas
 
 def buscar_solides(termos, locais, termos_excluir):
     vagas = []
-    base_url = "https://vacancy-service.vagas.solides.com.br/api/v1/vacancies/search"
+    base_url = "https://vagas.solides.com.br/api/v1/jobs/search"
     for termo in termos:
-        payload = {"title": termo, "take": 20, "page": 1}
-        res = fetch_url(base_url, method="POST", json_data=payload, referer="https://vagas.solides.com.br/")
+        print(f"  └ Buscando termo Sólides: {termo}", flush=True)
+        params = {"title": termo, "take": 20, "page": 1}
+        res = fetch_url(base_url, params=params, referer="https://vagas.solides.com.br/")
         if not res:
             continue
         try:
@@ -200,12 +196,13 @@ def buscar_solides(termos, locais, termos_excluir):
                     "plataforma": "Sólides"
                 })
         except Exception as e:
-            print(f"⚠️ Erro no parsing Sólides: {e}")
+            print(f"⚠️ Erro no parsing Sólides: {e}", flush=True)
     return vagas
 
 def buscar_linkedin(termos, locais, termos_excluir):
     vagas = []
     for termo in termos:
+        print(f"  └ Buscando termo LinkedIn: {termo}", flush=True)
         termo_encoded = urllib.parse.quote(termo)
         url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={termo_encoded}&location=Brasil&start=0"
         res = fetch_url(url, referer="https://www.linkedin.com/")
@@ -237,6 +234,7 @@ def buscar_linkedin(termos, locais, termos_excluir):
 
 def buscar_remotar(termos, locais, termos_excluir):
     vagas = []
+    print("  └ Buscando feed Remotar...", flush=True)
     url = "https://remotar.com.br/"
     res = fetch_url(url, referer="https://remotar.com.br/")
     if not res:
@@ -259,39 +257,34 @@ def buscar_remotar(termos, locais, termos_excluir):
 
 def buscar_coodesh(termos, locais, termos_excluir):
     vagas = []
-    url = "https://api.coodesh.com/v1/public/jobs"
     for termo in termos:
-        params = {"search": termo, "limit": 20}
-        res = fetch_url(url, params=params, referer="https://coodesh.com/")
+        print(f"  └ Buscando termo Coodesh: {termo}", flush=True)
+        termo_encoded = urllib.parse.quote(termo)
+        url = f"https://coodesh.com/vagas?search={termo_encoded}"
+        res = fetch_url(url, referer="https://coodesh.com/")
         if not res:
             continue
-        try:
-            data = res.json()
-            items = data.get("hits", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
-            for item in items:
-                titulo = item.get("title", "")
-                if deve_excluir(titulo, termos_excluir):
-                    continue
-                empresa = item.get("company", {}).get("name", "Coodesh") if isinstance(item.get("company"), dict) else "Coodesh"
-                slug = item.get("slug", "")
-                link = f"https://coodesh.com/vagas/{slug}" if slug else "https://coodesh.com/vagas"
-                local_str = "Remoto" if item.get("homeOffice", False) else "Presencial/Híbrido"
+        soup = BeautifulSoup(res.text, "html.parser")
+        cards = soup.find_all("a", href=re.compile(r"/vagas/"))
+        for card in cards:
+            titulo = card.get_text(strip=True)
+            if titulo and not deve_excluir(titulo, termos_excluir):
+                href = card.get("href", "")
+                link = f"https://coodesh.com{href}" if href.startswith("/") else href
                 vagas.append({
                     "titulo": titulo,
-                    "empresa": empresa,
-                    "local": local_str,
+                    "empresa": "Coodesh",
+                    "local": "Remoto",
                     "link": link,
                     "plataforma": "Coodesh"
                 })
-        except Exception as e:
-            print(f"⚠️ Erro no parsing Coodesh: {e}")
     return vagas
 
 # ==============================================================================
 # EXECUÇÃO PRINCIPAL
 # ==============================================================================
 def main():
-    print("🚀 Iniciando varredura de vagas com AutoJob...")
+    print("🚀 Iniciando varredura de vagas com AutoJob...", flush=True)
     config = load_config()
     history = load_history()
     
@@ -303,26 +296,26 @@ def main():
     vagas_encontradas = []
 
     if plataformas_ativas.get("gupy", True):
-        print("🔎 Buscando na Gupy...")
+        print("🔎 Buscando na Gupy...", flush=True)
         vagas_encontradas.extend(buscar_gupy(termos, locais, termos_excluir))
 
     if plataformas_ativas.get("solides", True):
-        print("🔎 Buscando na Sólides...")
+        print("🔎 Buscando na Sólides...", flush=True)
         vagas_encontradas.extend(buscar_solides(termos, locais, termos_excluir))
 
     if plataformas_ativas.get("linkedin", True):
-        print("🔎 Buscando no LinkedIn...")
+        print("🔎 Buscando no LinkedIn...", flush=True)
         vagas_encontradas.extend(buscar_linkedin(termos, locais, termos_excluir))
 
     if plataformas_ativas.get("remotar", True):
-        print("🔎 Buscando na Remotar...")
+        print("🔎 Buscando na Remotar...", flush=True)
         vagas_encontradas.extend(buscar_remotar(termos, locais, termos_excluir))
 
     if plataformas_ativas.get("coodesh", True):
-        print("🔎 Buscando na Coodesh...")
+        print("🔎 Buscando na Coodesh...", flush=True)
         vagas_encontradas.extend(buscar_coodesh(termos, locais, termos_excluir))
 
-    print(f"📊 Total de vagas capturadas antes da desduplicação: {len(vagas_encontradas)}")
+    print(f"📊 Total de vagas capturadas antes da desduplicação: {len(vagas_encontradas)}", flush=True)
 
     novas_vagas_count = 0
     high_match_count = 0
@@ -361,7 +354,7 @@ def main():
             )
             
             send_telegram(msg, vaga["link"])
-            time.sleep(1)
+            time.sleep(0.5)
 
             detalhes_recentes.insert(0, {
                 "titulo": vaga["titulo"],
@@ -392,7 +385,7 @@ def main():
         )
         send_telegram(msg_resumo)
 
-    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas.")
+    print(f"✅ Processamento concluído. {novas_vagas_count} novas vagas notificadas.", flush=True)
 
 if __name__ == "__main__":
     main()
