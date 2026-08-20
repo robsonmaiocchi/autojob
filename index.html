@@ -3,506 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoJob - Dashboard de Vagas</title>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
+    <title>AutoJob Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-body: #0f172a;           /* Slate 900 */
-            --card-bg: #1e293b;           /* Slate 800 */
-            --text-main: #f8fafc;         
-            --text-muted: #94a3b8;        
-            --border-color: #334155;      
-            --primary-color: #3b82f6;     
-            --input-bg: #0f172a;          
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --border-color: #334155;
         }
 
-        body { 
-            background-color: var(--bg-body); 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-primary); color: var(--text-main); padding: 24px; min-height: 100vh; }
 
-        /* Header */
-        .header-bg { 
-            background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%); 
-            color: white; 
-            padding: 2.2rem 0; 
-            margin-bottom: 2rem; 
-            border-bottom: 1px solid var(--border-color);
-        }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header-title h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+        .btn-export { background: var(--accent-blue); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-export:hover { opacity: 0.9; }
 
-        /* Cards de Métricas */
-        .stat-card { 
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            border-color: #475569;
-        }
-        .stat-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-top: 0.25rem;
-        }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .metric-card { background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center; }
+        .metric-card span { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-card h2 { font-size: 2rem; margin-top: 8px; }
 
-        /* Container Principal */
-        .main-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-            padding: 1.5rem;
-            position: relative;
-        }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .chart-card { background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .chart-card h3 { font-size: 1rem; color: var(--text-muted); margin-bottom: 12px; width: 100%; text-align: left; }
 
-        /* Filtros e Busca */
-        .form-control, .form-select, .input-group-text {
-            background-color: var(--input-bg) !important;
-            border-color: var(--border-color) !important;
-            color: var(--text-main) !important;
-            font-size: 0.9rem;
-        }
-        .form-control::placeholder { color: #64748b; }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color) !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-        }
+        .filters-bar { background: var(--bg-card); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+        .filters-bar input, .filters-bar select { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+        .filters-bar input { flex: 1; min-width: 200px; }
 
-        /* Tabela Estilizada */
-        .custom-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 10px;
-            margin-top: -10px;
-        }
-        .custom-table thead th {
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 0.75rem 1rem;
-        }
-        .custom-table tbody tr {
-            background-color: #1e293b;
-            transition: all 0.2s ease;
-        }
-        .custom-table tbody tr:hover {
-            background-color: #24334a;
-            transform: translateY(-1px);
-        }
-        .custom-table td {
-            padding: 1rem;
-            vertical-align: middle;
-            border-top: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-        }
-        .custom-table td:first-child {
-            border-left: 1px solid var(--border-color);
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px;
-        }
-        .custom-table td:last-child {
-            border-right: 1px solid var(--border-color);
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px;
-        }
+        .table-container { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
+        th { background: rgba(0,0,0,0.2); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        tr:hover { background: var(--bg-hover); }
 
-        /* Badges e Pílulas */
-        .pill-badge {
-            border-radius: 50rem;
-            padding: 0.35em 0.8em;
-            font-size: 0.78rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .badge-high { background-color: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge-medium { background-color: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
-        .badge-low { background-color: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
+        .star-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; }
+        .star-btn.active { color: var(--accent-yellow); }
 
-        .platform-gupy { background-color: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
-        .platform-linkedin { background-color: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
-        .platform-solides { background-color: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
-        .platform-remotar { background-color: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
-        .platform-coodesh { background-color: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+        .badge-plat { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); display: inline-block; }
+        .badge-score { font-weight: 700; }
+        .high-score { color: var(--accent-green); }
+        .med-score { color: var(--accent-yellow); }
+        .low-score { color: var(--text-muted); }
 
-        /* Textos e Células */
-        .vaga-title-container {
-            position: relative;
-            cursor: pointer;
-        }
-        .vaga-title {
-            color: #f1f5f9;
-            font-size: 0.93rem;
-            font-weight: 600;
-            line-height: 1.35;
-        }
-        .vaga-company {
-            color: #cbd5e1;
-            font-size: 0.88rem;
-            font-weight: 500;
-        }
+        .btn-action { padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; }
+        .btn-ver { background: var(--accent-blue); color: white; margin-right: 6px; }
+        .btn-candidatado { background: var(--bg-hover); color: var(--text-muted); }
+        .btn-candidatado.done { background: var(--accent-green); color: white; }
 
-        /* Painel Flutuante (Hover Card) */
-        .hover-card {
-            position: absolute;
-            z-index: 1050;
-            width: 320px;
-            background: #0f172a;
-            border: 1px solid #475569;
-            border-radius: 12px;
-            padding: 1rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-            display: none;
-            pointer-events: none; /* Evita interferir com o movimento do mouse */
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        .hover-card.show {
-            display: block;
-            opacity: 1;
-        }
+        .title-cell { position: relative; cursor: pointer; }
+        .hover-card { display: none; position: absolute; left: 10px; top: 100%; z-index: 100; background: #0f172a; border: 1px solid var(--accent-blue); padding: 12px; border-radius: 8px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-size: 0.8rem; line-height: 1.4; color: var(--text-main); pointer-events: none; }
+        .title-cell:hover .hover-card { display: block; }
 
-        /* Botões de Ação */
-        .btn-action-group .btn {
-            padding: 0.35rem 0.65rem;
-            font-size: 0.82rem;
-            border-radius: 6px;
-            font-weight: 500;
-        }
-        .btn-outline-secondary { color: #94a3b8; border-color: #475569; }
-        .btn-outline-secondary:hover { background-color: #334155; color: #f8fafc; }
-        .btn-outline-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
-        .btn-outline-danger:hover { background-color: #dc2626; color: white; }
-        .btn-outline-success { color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
-        .btn-outline-success:hover { background-color: #16a34a; color: white; }
+        @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <div class="header-bg">
-        <div class="container text-center">
-            <h2 class="fw-bold mb-1">🚀 AutoJob Dashboard</h2>
-            <p class="text-white-50 mb-0 small">Painel Inteligente de Monitoramento e Oportunidades</p>
+    <header>
+        <div class="header-title">
+            <h1>🚀 AutoJob Dashboard</h1>
+            <p>Painel Inteligente de Monitoramento e Oportunidades</p>
+        </div>
+        <button class="btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+    </header>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <span>Total Capturado</span>
+            <h2 id="metric-total">0</h2>
+        </div>
+        <div class="metric-card">
+            <span>Alta Relevância</span>
+            <h2 id="metric-high" style="color: var(--accent-green)">0</h2>
+        </div>
+        <div class="metric-card">
+            <span>Favoritas</span>
+            <h2 id="metric-fav" style="color: var(--accent-yellow)">0</h2>
+        </div>
+        <div class="metric-card">
+            <span>Candidatado</span>
+            <h2 id="metric-applied" style="color: var(--accent-blue)">0</h2>
         </div>
     </div>
 
-    <!-- Hover Card Flutuante NATIVO -->
-    <div id="hoverCard" class="hover-card">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <span id="hoverCardPlat"></span>
-            <span id="hoverCardScore"></span>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h3>Distribuição por Plataforma</h3>
+            <canvas id="chartPlataformas"></canvas>
         </div>
-        <h6 id="hoverCardTitle" class="fw-bold text-light mb-1" style="font-size: 0.95rem;"></h6>
-        <div id="hoverCardCompany" class="text-primary small fw-semibold mb-2"></div>
-        <hr class="border-secondary my-2">
-        <div id="hoverCardDesc" class="text-secondary small" style="font-size: 0.82rem; max-height: 120px; overflow-y: auto; line-height: 1.4;"></div>
+        <div class="chart-card">
+            <h3>Nível de Match</h3>
+            <canvas id="chartMatch"></canvas>
+        </div>
     </div>
 
-    <div class="container mb-5">
-        <!-- Cards de Métricas -->
-        <div class="row g-3 mb-4 align-items-stretch">
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <span class="stat-title">Total Capturado</span>
-                    <div id="stat-total" class="stat-value text-primary">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <span class="stat-title">Alta Relevância</span>
-                    <div id="stat-high" class="stat-value text-success">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <span class="stat-title">Candidatado</span>
-                    <div id="stat-applied" class="stat-value text-info">0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <span class="stat-title">Última Atualização</span>
-                    <div id="stat-date" class="stat-value text-secondary" style="font-size: 1.1rem; line-height: 1.2;">-</div>
-                </div>
-            </div>
-        </div>
+    <div class="filters-bar">
+        <input type="text" id="filter-search" placeholder="🔍 Buscar cargo ou empresa..." oninput="renderTable()">
+        <select id="filter-score" onchange="renderTable()">
+            <option value="">🎯 Todas as Relevâncias</option>
+            <option value="high">🔥 Alta (>= 70%)</option>
+            <option value="medium">🟡 Média (40% - 69%)</option>
+            <option value="low">⚪ Geral (< 40%)</option>
+        </select>
+        <select id="filter-plat" onchange="renderTable()">
+            <option value="">🌐 Todas as Plataformas</option>
+            <option value="Gupy">Gupy</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Sólides">Sólides</option>
+            <option value="Remotar">Remotar</option>
+            <option value="Coodesh">Coodesh</option>
+        </select>
+        <select id="filter-status" onchange="renderTable()">
+            <option value="">📋 Todos os Status</option>
+            <option value="fav">⭐ Apenas Favoritas</option>
+            <option value="applied">✅ Apenas Candidatadas</option>
+        </select>
+        <select id="filter-sort" onchange="renderTable()">
+            <option value="date-desc">📅 Mais Recentes</option>
+            <option value="score-desc">🔥 Maior Score</option>
+        </select>
+    </div>
 
-        <!-- Painel Principal de Filtros e Vagas -->
-        <div class="main-card">
-            <div class="row g-3 mb-4">
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text border-end-0" style="border-radius: 8px 0 0 8px;">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" id="searchInput" class="form-control border-start-0" style="border-radius: 0 8px 8px 0;" placeholder="Buscar cargo ou empresa...">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <select id="filterScore" class="form-select" style="border-radius: 8px;">
-                        <option value="all">🎯 Todas as Relevâncias</option>
-                        <option value="high">🔥 Alta Relevância (≥ 70%)</option>
-                        <option value="medium">🟡 Média Relevância (40% - 69%)</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="filterStatus" class="form-select" style="border-radius: 8px;">
-                        <option value="all">📋 Todos os Status</option>
-                        <option value="pending">⏳ Pendentes</option>
-                        <option value="applied">✅ Candidatado</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Tabela Estilizada -->
-            <div class="table-responsive">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 30%;">Título do Cargo</th>
-                            <th style="width: 18%;">Empresa</th>
-                            <th style="width: 12%;">Plataforma</th>
-                            <th class="text-center" style="width: 12%;">Match Score</th>
-                            <th style="width: 13%;">Capturado em</th>
-                            <th class="text-center" style="width: 15%;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vagasTable">
-                        <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-arrow-repeat spin"></i> Carregando dados...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;">★</th>
+                    <th>Título do Cargo</th>
+                    <th>Empresa</th>
+                    <th>Plataforma</th>
+                    <th>Match Score</th>
+                    <th>Capturado Em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="vagas-table-body">
+                <tr><td colspan="7" style="text-align: center; padding: 20px;">Carregando histórico de vagas...</td></tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
-        let vagasData = [];
-        let statusMap = JSON.parse(localStorage.getItem('autojob_status') || '{}');
-        const hoverCard = document.getElementById('hoverCard');
+        let rawData = [];
+        let favorites = JSON.parse(localStorage.getItem('autojob_favorites') || '[]');
+        let applied = JSON.parse(localStorage.getItem('autojob_applied') || '[]');
+        let chartPlatInstance = null;
+        let chartMatchInstance = null;
 
-        async function loadDashboard() {
+        function getVagaKey(vaga) {
+            return `${vaga.titulo}_${vaga.empresa}_${vaga.plataforma}`.toLowerCase();
+        }
+
+        async function loadHistory() {
             try {
-                const res = await fetch('history.json?t=' + new Date().getTime());
+                const res = await fetch('history.json');
                 const data = await res.json();
-                vagasData = data.detalhes || [];
-                
-                updateStats(vagasData, data.hashes ? data.hashes.length : 0);
-                renderTable(vagasData);
-            } catch (err) {
-                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-5"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar o histórico de vagas.</td></tr>';
+                rawData = data.detalhes || [];
+                updateDashboard();
+            } catch (e) {
+                console.error("Erro ao carregar dados:", e);
+                document.getElementById('vagas-table-body').innerHTML = 
+                    `<tr><td colspan="7" style="text-align: center; color: var(--accent-red); padding: 20px;">Erro ao carregar history.json. Execute o scraper para gerar o histórico.</td></tr>`;
             }
         }
 
-        function getVagaKey(v) {
-            return `${v.titulo}_${v.empresa}_${v.plataforma}`.toLowerCase().replace(/\s+/g, '');
+        function updateDashboard() {
+            updateMetrics();
+            renderCharts();
+            renderTable();
         }
 
-        function updateStats(detalhes, totalHashes) {
-            document.getElementById('stat-total').innerText = totalHashes;
-            document.getElementById('stat-high').innerText = detalhes.filter(v => (v.score || 0) >= 70).length;
-            
-            const appliedCount = Object.values(statusMap).filter(s => s === 'applied').length;
-            document.getElementById('stat-applied').innerText = appliedCount;
-            
-            if (detalhes.length > 0 && detalhes[0].data) {
-                const parts = detalhes[0].data.split(' ');
-                if (parts.length === 2) {
-                    document.getElementById('stat-date').innerHTML = `${parts[0]}<br><span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">${parts[1]}</span>`;
-                } else {
-                    document.getElementById('stat-date').innerText = detalhes[0].data;
-                }
+        function updateMetrics() {
+            document.getElementById('metric-total').innerText = rawData.length;
+            document.getElementById('metric-high').innerText = rawData.filter(v => (v.score || 0) >= 70).length;
+            document.getElementById('metric-fav').innerText = favorites.length;
+            document.getElementById('metric-applied').innerText = applied.length;
+        }
+
+        function toggleFavorite(key) {
+            if (favorites.includes(key)) {
+                favorites = favorites.filter(k => k !== key);
             } else {
-                document.getElementById('stat-date').innerText = 'N/A';
+                favorites.push(key);
             }
+            localStorage.setItem('autojob_favorites', JSON.stringify(favorites));
+            updateDashboard();
         }
 
-        function getPlatformBadge(plat) {
-            const name = (plat || '').toLowerCase();
-            let cssClass = 'badge-low';
-            
-            if (name.includes('gupy')) cssClass = 'platform-gupy';
-            else if (name.includes('linkedin')) cssClass = 'platform-linkedin';
-            else if (name.includes('sólides') || name.includes('solides')) cssClass = 'platform-solides';
-            else if (name.includes('remotar')) cssClass = 'platform-remotar';
-            else if (name.includes('coodesh')) cssClass = 'platform-coodesh';
-
-            return `<span class="pill-badge ${cssClass}">${plat}</span>`;
+        function toggleApplied(key) {
+            if (applied.includes(key)) {
+                applied = applied.filter(k => k !== key);
+            } else {
+                applied.push(key);
+            }
+            localStorage.setItem('autojob_applied', JSON.stringify(applied));
+            updateDashboard();
         }
 
-        function renderTable(vagas) {
-            const tbody = document.getElementById('vagasTable');
-            tbody.innerHTML = '';
+        function renderCharts() {
+            const platCounts = {};
+            let high = 0, med = 0, low = 0;
 
-            if (vagas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Nenhuma vaga encontrada para os filtros aplicados.</td></tr>';
+            rawData.forEach(v => {
+                platCounts[v.plataforma] = (platCounts[v.plataforma] || 0) + 1;
+                const score = v.score || 0;
+                if (score >= 70) high++;
+                else if (score >= 40) med++;
+                else low++;
+            });
+
+            if (chartPlatInstance) chartPlatInstance.destroy();
+            chartPlatInstance = new Chart(document.getElementById('chartPlataformas'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(platCounts),
+                    datasets: [{
+                        data: Object.values(platCounts),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#f8fafc' } } } }
+            });
+
+            if (chartMatchInstance) chartMatchInstance.destroy();
+            chartMatchInstance = new Chart(document.getElementById('chartMatch'), {
+                type: 'bar',
+                data: {
+                    labels: ['🔥 Alta (>=70%)', '🟡 Média (40-69%)', '⚪ Geral (<40%)'],
+                    datasets: [{
+                        data: [high, med, low],
+                        backgroundColor: ['#10b981', '#f59e0b', '#94a3b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#f8fafc' } },
+                        y: { ticks: { color: '#f8fafc' } }
+                    }
+                }
+            });
+        }
+
+        function renderTable() {
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const scoreFilter = document.getElementById('filter-score').value;
+            const platFilter = document.getElementById('filter-plat').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            const sortFilter = document.getElementById('filter-sort').value;
+
+            let filtered = rawData.filter(v => {
+                const key = getVagaKey(v);
+                const matchText = (v.titulo + ' ' + v.empresa).toLowerCase().includes(search);
+                
+                let matchScore = true;
+                const score = v.score || 0;
+                if (scoreFilter === 'high') matchScore = score >= 70;
+                if (scoreFilter === 'medium') matchScore = score >= 40 && score < 70;
+                if (scoreFilter === 'low') matchScore = score < 40;
+
+                let matchPlat = platFilter ? v.plataforma === platFilter : true;
+
+                let matchStatus = true;
+                if (statusFilter === 'fav') matchStatus = favorites.includes(key);
+                if (statusFilter === 'applied') matchStatus = applied.includes(key);
+
+                return matchText && matchScore && matchPlat && matchStatus;
+            });
+
+            if (sortFilter === 'score-desc') {
+                filtered.sort((a, b) => (b.score || 0) - (a.score || 0));
+            } else {
+                filtered.sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0));
+            }
+
+            const tbody = document.getElementById('vagas-table-body');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">Nenhuma vaga encontrada para os filtros selecionados.</td></tr>`;
                 return;
             }
 
-            vagas.forEach((v, idx) => {
+            tbody.innerHTML = filtered.map(v => {
                 const key = getVagaKey(v);
-                const currentStatus = statusMap[key] || 'pending';
-
-                if (currentStatus === 'dismissed') return;
-
-                const score = v.score || 0;
-                let scoreBadge = '<span class="pill-badge badge-low justify-content-center align-items-center"><i class="bi bi-circle me-1" style="font-size: 0.65rem;"></i> ' + score + '%</span>';
-
-                if (score >= 70) {
-                    scoreBadge = '<span class="pill-badge badge-high justify-content-center align-items-center"><i class="bi bi-fire me-1"></i> ' + score + '%</span>';
-                } else if (score >= 40) {
-                    scoreBadge = '<span class="pill-badge badge-medium justify-content-center align-items-center"><i class="bi bi-star me-1"></i> ' + score + '%</span>';
-                }
-
-                const isApplied = currentStatus === 'applied';
-
-                const tr = document.createElement('tr');
-                if (isApplied) tr.style.opacity = '0.5';
-
-                tr.innerHTML = `
-                    <td>
-                        <div class="vaga-title-container" data-idx="${idx}">
-                            <div class="vaga-title">${v.titulo}</div>
-                            ${isApplied ? '<span class="badge bg-info text-dark mt-1" style="font-size:0.7rem;">Candidatado</span>' : ''}
-                        </div>
-                    </td>
-                    <td><span class="vaga-company">${v.empresa}</span></td>
-                    <td>${getPlatformBadge(v.plataforma)}</td>
-                    <td class="text-center">${scoreBadge}</td>
-                    <td class="text-muted small">${v.data || 'N/A'}</td>
-                    <td class="text-center">
-                        <div class="btn-group btn-action-group" role="group">
-                            <a href="${v.link}" target="_blank" class="btn btn-primary" title="Abrir vaga">
-                                <i class="bi bi-box-arrow-up-right"></i> Ver
-                            </a>
-                            <button onclick="toggleStatus('${key}', '${isApplied ? 'pending' : 'applied'}')" 
-                                    class="btn ${isApplied ? 'btn-outline-secondary' : 'btn-outline-success'}" 
-                                    title="${isApplied ? 'Desfazer candidatura' : 'Marcar como candidatado'}">
-                                <i class="bi ${isApplied ? 'bi-arrow-counterclockwise' : 'bi-check-lg'}"></i>
-                            </button>
-                            <button onclick="dismissVaga('${key}')" class="btn btn-outline-danger" title="Ocultar vaga">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            setupHoverCards(vagas);
-        }
-
-        function setupHoverCards(vagas) {
-            document.querySelectorAll('.vaga-title-container').forEach(el => {
-                el.addEventListener('mouseenter', (e) => {
-                    const idx = el.getAttribute('data-idx');
-                    const vaga = vagas[idx];
-                    if (!vaga) return;
-
-                    document.getElementById('hoverCardTitle').innerText = vaga.titulo;
-                    document.getElementById('hoverCardCompany').innerText = vaga.empresa;
-                    document.getElementById('hoverCardPlat').innerHTML = getPlatformBadge(vaga.plataforma);
-
-                    const score = vaga.score || 0;
-                    let badgeClass = score >= 70 ? 'badge-high' : (score >= 40 ? 'badge-medium' : 'badge-low');
-                    document.getElementById('hoverCardScore').innerHTML = `<span class="pill-badge ${badgeClass}">${score}% Match</span>`;
-
-                    const desc = vaga.resumo || vaga.descricao || 'Sem resumo detalhado disponível para esta vaga. Clique em "Ver" para acessar a descrição completa no site original.';
-                    document.getElementById('hoverCardDesc').innerText = desc;
-
-                    // Posicionar o card próximo ao mouse
-                    hoverCard.style.top = (e.pageY + 15) + 'px';
-                    hoverCard.style.left = (e.pageX + 15) + 'px';
-                    hoverCard.classList.add('show');
-                });
-
-                el.addEventListener('mousemove', (e) => {
-                    hoverCard.style.top = (e.pageY + 15) + 'px';
-                    hoverCard.style.left = (e.pageX + 15) + 'px';
-                });
-
-                el.addEventListener('mouseleave', () => {
-                    hoverCard.classList.remove('show');
-                });
-            });
-        }
-
-        function toggleStatus(key, newStatus) {
-            statusMap[key] = newStatus;
-            localStorage.setItem('autojob_status', JSON.stringify(statusMap));
-            updateStats(vagasData, vagasData.length);
-            filterData();
-        }
-
-        function dismissVaga(key) {
-            if (confirm("Ocultar esta vaga da sua lista?")) {
-                statusMap[key] = 'dismissed';
-                localStorage.setItem('autojob_status', JSON.stringify(statusMap));
-                filterData();
-            }
-        }
-
-        document.getElementById('searchInput').addEventListener('input', filterData);
-        document.getElementById('filterScore').addEventListener('change', filterData);
-        document.getElementById('filterStatus').addEventListener('change', filterData);
-
-        function filterData() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const scoreFilter = document.getElementById('filterScore').value;
-            const statusFilter = document.getElementById('filterStatus').value;
-
-            const filtered = vagasData.filter(v => {
-                const key = getVagaKey(v);
-                const currentStatus = statusMap[key] || 'pending';
-
-                if (currentStatus === 'dismissed') return false;
-
-                const matchesSearch = v.titulo.toLowerCase().includes(search) || v.empresa.toLowerCase().includes(search);
+                const isFav = favorites.includes(key);
+                const isApplied = applied.includes(key);
                 const score = v.score || 0;
                 
-                let matchesScore = true;
-                if (scoreFilter === 'high') matchesScore = score >= 70;
-                if (scoreFilter === 'medium') matchesScore = score >= 40 && score < 70;
+                let scoreClass = 'low-score';
+                if (score >= 70) scoreClass = 'high-score';
+                else if (score >= 40) scoreClass = 'med-score';
 
-                let matchesStatus = true;
-                if (statusFilter === 'pending') matchesStatus = currentStatus === 'pending';
-                if (statusFilter === 'applied') matchesStatus = currentStatus === 'applied';
+                const resumoText = v.resumo || `Oportunidade para ${v.titulo} na empresa ${v.empresa}.`;
 
-                return matchesSearch && matchesScore && matchesStatus;
-            });
-
-            renderTable(filtered);
+                return `
+                    <tr>
+                        <td>
+                            <button class="star-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${key}')">★</button>
+                        </td>
+                        <td class="title-cell">
+                            <strong>${v.titulo}</strong>
+                            <div class="hover-card">
+                                <strong>${v.titulo}</strong><br>
+                                <small style="color: var(--accent-blue)">${v.empresa} (${v.plataforma})</small>
+                                <p style="margin-top: 6px;">${resumoText}</p>
+                            </div>
+                        </td>
+                        <td>${v.empresa}</td>
+                        <td><span class="badge-plat">${v.plataforma}</span></td>
+                        <td><span class="badge-score ${scoreClass}">${score}%</span></td>
+                        <td><small style="color: var(--text-muted);">${v.data || 'N/A'}</small></td>
+                        <td>
+                            <a href="${v.link}" target="_blank" class="btn-action btn-ver">🚀 Ver Vaga</a>
+                            <button class="btn-action btn-candidatado ${isApplied ? 'done' : ''}" onclick="toggleApplied('${key}')">
+                                ${isApplied ? '✓ Candidatado' : 'Marcar'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
-        loadDashboard();
+        function exportarCSV() {
+            if (!rawData.length) return alert('Sem dados para exportar!');
+            let csv = 'Titulo,Empresa,Plataforma,Score,Data,Link\n';
+            rawData.forEach(v => {
+                csv += `"${v.titulo}","${v.empresa}","${v.plataforma}",${v.score || 0},"${v.data || ''}","${v.link}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `autojob_vagas_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        loadHistory();
     </script>
 </body>
 </html>
