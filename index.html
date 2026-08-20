@@ -4,83 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoJob - Dashboard de Vagas</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .header-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; }
-        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); border-radius: 10px; }
-        .stat-card { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 110px; }
-        .badge-high { background-color: #28a745; }
-        .badge-medium { background-color: #ffc107; color: #212529; }
-        .badge-low { background-color: #6c757d; }
-        .btn-candidatar { white-space: nowrap; }
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            color: #333;
+        }
+        .header-bg { 
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
+            color: white; 
+            padding: 2.5rem 0; 
+            margin-bottom: 2rem; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .card { 
+            border: none; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            border-radius: 12px; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 110px; 
+        }
+        
+        /* Badges em Pílulas */
+        .pill-badge {
+            border-radius: 50rem;
+            padding: 0.35em 0.8em;
+            font-size: 0.80rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-high { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .badge-medium { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+        .badge-low { background-color: #e2e3e5; color: #41464b; border: 1px solid #d3d6d8; }
+
+        .platform-gupy { background-color: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+        .platform-linkedin { background-color: #e8f4f9; color: #0077b5; border: 1px solid #b3e5fc; }
+        .platform-solides { background-color: #f3e5f5; color: #4a148c; border: 1px solid #e1bee7; }
+        .platform-remotar { background-color: #e0f2f1; color: #004d40; border: 1px solid #b2dfdb; }
+        .platform-coodesh { background-color: #fff8e1; color: #ff6f00; border: 1px solid #ffe082; }
+
+        /* Tabela e Linhas */
+        .table { vertical-align: middle; }
+        .row-high-score { background-color: rgba(40, 167, 69, 0.02); }
+        .row-applied { opacity: 0.6; background-color: rgba(0, 0, 0, 0.02); }
+        .row-dismissed { display: none; }
+
+        .btn-action {
+            border-radius: 50rem;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.8rem;
+            white-space: nowrap;
+        }
+
+        .search-box {
+            border-radius: 50rem;
+            padding-left: 1.2rem;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header-bg text-center">
-        <div class="container">
-            <h1 class="fw-bold">🚀 AutoJob Dashboard</h1>
-            <p class="lead mb-0">Painel Inteligente de Monitoramento de Vagas</p>
+    <div class="header-bg">
+        <div class="container text-center">
+            <h1 class="fw-bold mb-1">🚀 AutoJob Dashboard</h1>
+            <p class="lead mb-0 text-white-50">Monitoramento e Gestão Inteligente de Vagas</p>
         </div>
     </div>
 
     <div class="container mb-5">
+        <!-- Cards de Métricas -->
         <div class="row g-3 mb-4 align-items-stretch">
             <div class="col-md-3">
                 <div class="card p-3 text-center h-100 stat-card">
-                    <h6 class="text-muted mb-2">Total de Vagas</h6>
-                    <h2 id="stat-total" class="fw-bold text-primary mb-0">0</h2>
+                    <span class="text-muted small fw-semibold text-uppercase">Total Monitorado</span>
+                    <h2 id="stat-total" class="fw-bold text-primary mb-0 mt-1">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 text-center h-100 stat-card">
-                    <h6 class="text-muted mb-2">Alta Relevância</h6>
-                    <h2 id="stat-high" class="fw-bold text-success mb-0">0</h2>
+                    <span class="text-muted small fw-semibold text-uppercase">Alta Relevância</span>
+                    <h2 id="stat-high" class="fw-bold text-success mb-0 mt-1">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 text-center h-100 stat-card">
-                    <h6 class="text-muted mb-2">Média Relevância</h6>
-                    <h2 id="stat-medium" class="fw-bold text-warning mb-0">0</h2>
+                    <span class="text-muted small fw-semibold text-uppercase">Candidatado</span>
+                    <h2 id="stat-applied" class="fw-bold text-info mb-0 mt-1">0</h2>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 text-center h-100 stat-card">
-                    <h6 class="text-muted mb-2">Última Atualização</h6>
-                    <div id="stat-date" class="fw-bold text-secondary fs-5 mb-0">-</div>
+                    <span class="text-muted small fw-semibold text-uppercase">Última Execução</span>
+                    <div id="stat-date" class="fw-bold text-secondary fs-6 mb-0 mt-2">-</div>
                 </div>
             </div>
         </div>
 
+        <!-- Filtros e Busca -->
         <div class="card p-4">
             <div class="row g-3 mb-3">
-                <div class="col-md-8">
-                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por título ou empresa...">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 rounded-start-pill text-muted">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control border-start-0 rounded-end-pill search-box ps-0" placeholder="Buscar por cargo ou empresa...">
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <select id="filterScore" class="form-select">
-                        <option value="all">Todas as relevâncias</option>
+                    <select id="filterScore" class="form-select rounded-pill">
+                        <option value="all">🎯 Todas as Relevâncias</option>
                         <option value="high">🔥 Alta Relevância (≥ 70%)</option>
                         <option value="medium">🟡 Média Relevância (40% - 69%)</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <select id="filterStatus" class="form-select rounded-pill">
+                        <option value="all">📋 Todos os Status</option>
+                        <option value="pending">⏳ Pendentes de Candidatura</option>
+                        <option value="applied">✅ Candidatado</option>
+                    </select>
+                </div>
             </div>
 
+            <!-- Tabela de Vagas -->
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Título</th>
+                            <th>Título do Cargo</th>
                             <th>Empresa</th>
                             <th>Plataforma</th>
                             <th class="text-center">Match Score</th>
-                            <th>Data</th>
-                            <th class="text-center">Ação</th>
+                            <th>Capturado em</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="vagasTable">
-                        <tr><td colspan="6" class="text-center text-muted">Carregando histórico...</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin"></i> Carregando histórico...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -89,6 +163,7 @@
 
     <script>
         let vagasData = [];
+        let statusMap = JSON.parse(localStorage.getItem('autojob_status') || '{}');
 
         async function loadDashboard() {
             try {
@@ -99,15 +174,35 @@
                 updateStats(vagasData, data.hashes ? data.hashes.length : 0);
                 renderTable(vagasData);
             } catch (err) {
-                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar o histórico de vagas.</td></tr>';
+                document.getElementById('vagasTable').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar o histórico de vagas.</td></tr>';
             }
+        }
+
+        function getVagaKey(v) {
+            return `${v.titulo}_${v.empresa}_${v.plataforma}`.toLowerCase().replace(/\s+/g, '');
         }
 
         function updateStats(detalhes, totalHashes) {
             document.getElementById('stat-total').innerText = totalHashes;
             document.getElementById('stat-high').innerText = detalhes.filter(v => (v.score || 0) >= 70).length;
-            document.getElementById('stat-medium').innerText = detalhes.filter(v => (v.score || 0) >= 40 && (v.score || 0) < 70).length;
+            
+            const appliedCount = Object.values(statusMap).filter(s => s === 'applied').length;
+            document.getElementById('stat-applied').innerText = appliedCount;
+            
             document.getElementById('stat-date').innerText = detalhes.length > 0 ? detalhes[0].data : 'N/A';
+        }
+
+        function getPlatformBadge(plat) {
+            const name = (plat || '').toLowerCase();
+            let cssClass = 'bg-light text-dark border';
+            
+            if (name.includes('gupy')) cssClass = 'platform-gupy';
+            else if (name.includes('linkedin')) cssClass = 'platform-linkedin';
+            else if (name.includes('sólides') || name.includes('solides')) cssClass = 'platform-solides';
+            else if (name.includes('remotar')) cssClass = 'platform-remotar';
+            else if (name.includes('coodesh')) cssClass = 'platform-coodesh';
+
+            return `<span class="pill-badge ${cssClass}">${plat}</span>`;
         }
 
         function renderTable(vagas) {
@@ -115,45 +210,102 @@
             tbody.innerHTML = '';
 
             if (vagas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma vaga encontrada.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Nenhuma vaga encontrada para os filtros selecionados.</td></tr>';
                 return;
             }
 
             vagas.forEach(v => {
+                const key = getVagaKey(v);
+                const currentStatus = statusMap[key] || 'pending';
+
+                if (currentStatus === 'dismissed') return;
+
                 const score = v.score || 0;
-                let badgeClass = 'badge-low';
-                if (score >= 70) badgeClass = 'badge-high';
-                else if (score >= 40) badgeClass = 'badge-medium';
+                let scoreBadge = '<span class="pill-badge badge-low"><i class="bi bi-circle"></i> ' + score + '%</span>';
+                if (score >= 70) {
+                    scoreBadge = '<span class="pill-badge badge-high"><i class="bi bi-fire"></i> ' + score + '%</span>';
+                } else if (score >= 40) {
+                    scoreBadge = '<span class="pill-badge badge-medium"><i class="bi bi-star"></i> ' + score + '%</span>';
+                }
+
+                let rowClass = score >= 70 ? 'row-high-score' : '';
+                if (currentStatus === 'applied') rowClass += ' row-applied';
 
                 const tr = document.createElement('tr');
+                tr.className = rowClass;
                 tr.innerHTML = `
-                    <td class="fw-semibold">${v.titulo}</td>
-                    <td>${v.empresa}</td>
-                    <td><span class="badge bg-light text-dark border">${v.plataforma}</span></td>
-                    <td class="text-center"><span class="badge ${badgeClass}">${score}%</span></td>
+                    <td class="fw-semibold text-dark">${v.titulo}</td>
+                    <td class="text-secondary">${v.empresa}</td>
+                    <td>${getPlatformBadge(v.plataforma)}</td>
+                    <td class="text-center">${scoreBadge}</td>
                     <td class="text-muted small">${v.data || 'N/A'}</td>
-                    <td class="text-center"><a href="${v.link}" target="_blank" class="btn btn-sm btn-outline-primary btn-candidatar">Candidatar-se</a></td>
+                    <td class="text-center">
+                        ${currentStatus === 'applied' 
+                            ? '<span class="pill-badge bg-info text-dark"><i class="bi bi-check-circle-fill"></i> Candidatado</span>' 
+                            : '<span class="pill-badge bg-light text-muted border">Pendente</span>'}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="${v.link}" target="_blank" class="btn btn-primary btn-action" title="Abrir Link">
+                                <i class="bi bi-box-arrow-up-right"></i> Ver
+                            </a>
+                            <button onclick="toggleStatus('${key}', '${currentStatus === 'applied' ? 'pending' : 'applied'}')" 
+                                    class="btn ${currentStatus === 'applied' ? 'btn-outline-secondary' : 'btn-outline-success'} btn-action" 
+                                    title="${currentStatus === 'applied' ? 'Marcar como Pendente' : 'Marcar como Candidatado'}">
+                                <i class="bi ${currentStatus === 'applied' ? 'bi-arrow-counterclockwise' : 'bi-check-lg'}"></i>
+                            </button>
+                            <button onclick="dismissVaga('${key}')" class="btn btn-outline-danger btn-action" title="Ocultar Vaga">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        function toggleStatus(key, newStatus) {
+            statusMap[key] = newStatus;
+            localStorage.setItem('autojob_status', JSON.stringify(statusMap));
+            updateStats(vagasData, vagasData.length);
+            filterData();
+        }
+
+        function dismissVaga(key) {
+            if (confirm("Deseja ocultar esta vaga da sua visualização?")) {
+                statusMap[key] = 'dismissed';
+                localStorage.setItem('autojob_status', JSON.stringify(statusMap));
+                filterData();
+            }
+        }
+
         document.getElementById('searchInput').addEventListener('input', filterData);
         document.getElementById('filterScore').addEventListener('change', filterData);
+        document.getElementById('filterStatus').addEventListener('change', filterData);
 
         function filterData() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const scoreFilter = document.getElementById('filterScore').value;
+            const statusFilter = document.getElementById('filterStatus').value;
 
             const filtered = vagasData.filter(v => {
+                const key = getVagaKey(v);
+                const currentStatus = statusMap[key] || 'pending';
+
+                if (currentStatus === 'dismissed') return false;
+
                 const matchesSearch = v.titulo.toLowerCase().includes(search) || v.empresa.toLowerCase().includes(search);
                 const score = v.score || 0;
-                let matchesScore = true;
                 
+                let matchesScore = true;
                 if (scoreFilter === 'high') matchesScore = score >= 70;
                 if (scoreFilter === 'medium') matchesScore = score >= 40 && score < 70;
 
-                return matchesSearch && matchesScore;
+                let matchesStatus = true;
+                if (statusFilter === 'pending') matchesStatus = currentStatus === 'pending';
+                if (statusFilter === 'applied') matchesStatus = currentStatus === 'applied';
+
+                return matchesSearch && matchesScore && matchesStatus;
             });
 
             renderTable(filtered);
